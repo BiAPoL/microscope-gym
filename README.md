@@ -14,15 +14,40 @@ python microscope (bad example)
 <div class="center">
 
 ```mermaid
-graph TD
-    A[Christmas] -->|Get money| B(Go shopping)
-    B --> C{Let me think}
-    C -->|One| D[Laptop]
-    C -->|Two| E[iPhone]
-    C -->|Three| F[fa:fa-car Car]
+flowchart TD
+    A[Smart feature] --> |uses| B(Microscope Gym API)
+    AA[Smart feature] --> |uses| B(Microscope Gym API)
+    AAA[Smart feature] --> |uses| B(Microscope Gym API)
+    AAAA[Smart feature] --> |uses| B(Microscope Gym API)
+    B -.-> |implemented by| C[Vendor 1 API adaptor]
+    B -.-> |implemented by| D[Vendor 2 API adaptor]
+    B -.-> |implemented by| E[Vendor 3 API adaptor]
+    C --> |uses| F{{Microscope Vendor 1 API}}
+    D --> |uses| G{{Microscope Vendor 2 API}}
+    E --> |uses| H{{Microscope Vendor 3 API}}
 ```
 </div>
-    
+
+### microscope GYM API
+
+defines interfaces by inheriting from abc.abc
+for example:
+
+```python
+from abc import ABC
+
+class Stage(ABC):
+    @property
+    @abstractmethod
+    def x_position(self):
+
+    @abstractmethod
+    move_x_to(target_x_position: float):
+
+    @abstractmethod
+    move_x_by(relative_x_position: float):
+```
+
 Versioned interface
 
 as few setter methods as possible
