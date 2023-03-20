@@ -61,7 +61,7 @@ as few setter methods as possible
 
 ## Next steps:
 
-* [ ] Schedule Meeting with Marcus and Hugo
+* [x] Schedule Meeting with Marcus and Hugo
 * [x] Create GitHub repository
 * [ ] order open uc2 microscope
 * [ ] write microscope emulator
