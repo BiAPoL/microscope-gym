@@ -11,6 +11,18 @@ python microscope (bad example)
 
 ## Code structure
 
+<div class="center">
+
+```mermaid
+graph TD
+    A[Christmas] -->|Get money| B(Go shopping)
+    B --> C{Let me think}
+    C -->|One| D[Laptop]
+    C -->|Two| E[iPhone]
+    C -->|Three| F[fa:fa-car Car]
+```
+</div>
+    
 Versioned interface
 
 as few setter methods as possible
