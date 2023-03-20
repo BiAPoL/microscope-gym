@@ -8,10 +8,7 @@
 
 python microscope (bad example)
 
-
 ## Code structure
-
-<div class="center">
 
 ```mermaid
 flowchart TD
@@ -26,7 +23,6 @@ flowchart TD
     D --> |uses| G{{Microscope Vendor 2 API}}
     E --> |uses| H{{Microscope Vendor 3 API}}
 ```
-</div>
 
 ### microscope GYM API
 
