@@ -16,9 +16,9 @@ flowchart TD
     AA[Smart feature] --> |uses| B(Microscope Gym API)
     AAA[Smart feature] --> |uses| B(Microscope Gym API)
     AAAA[Smart feature] --> |uses| B(Microscope Gym API)
-    B -.-> |implemented by| C[Vendor 1 API adaptor]
-    B -.-> |implemented by| D[Vendor 2 API adaptor]
-    B -.-> |implemented by| E[Vendor 3 API adaptor]
+    B -.-> |implemented by| C[Vendor 1 API adapter]
+    B -.-> |implemented by| D[Vendor 2 API adapter]
+    B -.-> |implemented by| E[Vendor 3 API adapter]
     C --> |uses| F{{Microscope Vendor 1 API}}
     D --> |uses| G{{Microscope Vendor 2 API}}
     E --> |uses| H{{Microscope Vendor 3 API}}
