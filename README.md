@@ -1,6 +1,6 @@
 # Microscope Gym
 
-## Example microscope APIs:
+## Example microscope APIs
 
 [pycromanager (python API for micromanager)](https://github.com/micro-manager/pycro-manager) possible template for which kind methods to implement
 [openUC2 REST API](https://github.com/openUC2/UC2-REST)
@@ -55,10 +55,9 @@ as few setter methods as possible
 * Honki Moon (Java smart microscope software)
 * Benedict Diederich (from UC2 microscope)
 
-## Next steps:
+## Next steps
 
 * [x] Schedule Meeting with Marcus and Hugo
 * [x] Create GitHub repository
 * [ ] order open uc2 microscope
 * [ ] write microscope emulator
-
