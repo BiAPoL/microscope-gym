@@ -47,10 +47,14 @@ Versioned interface
 
 as few setter methods as possible
 
+## People that are involved
+
+* Jamie White
+* Hugo Sebastiao
+
 ## People that might be interested to get involved
 
 * Marcus Jahnel
-* Hugo (Jahnel lab)
 * Honki Moon (Java smart microscope software)
 * Benedict Diederich (from UC2 microscope)
 
@@ -59,4 +63,4 @@ as few setter methods as possible
 * [x] Schedule Meeting with Marcus and Hugo
 * [x] Create GitHub repository
 * [ ] order open uc2 microscope
-* [ ] write microscope emulator
+* [x] write microscope emulator
