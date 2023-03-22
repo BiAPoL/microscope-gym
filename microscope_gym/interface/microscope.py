@@ -16,8 +16,13 @@ class Microscope(ABC):
     '''
 
     @abstractmethod
-    def move_stage(self, x: "float", y: "float", z: "float"):
+    def move_stage_to(self, x: "float", y: "float", z: "float"):
         '''Move stage to absolute x, y, z position in µm.'''
+        pass
+
+    @abstractmethod
+    def move_stage_by(self, x: "float", y: "float", z: "float"):
+        '''Move stage by relative x, y, z position in µm.'''
         pass
 
     @abstractmethod

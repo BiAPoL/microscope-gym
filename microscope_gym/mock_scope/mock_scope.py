@@ -11,7 +11,7 @@ class Camera(interface.Camera):
         self.overview_image = overview_image
 
     def capture_image(self, x, y, z):
-        return self.overview_image[z, int(y):int(y) + self.width, int(x):int(x) + self.height]
+        return self.overview_image[int(z), int(y):int(y) + self.height, int(x):int(x) + self.width]
 
     def configure_camera(self, settings):
         self.settings = settings
@@ -47,9 +47,9 @@ class Stage(interface.Stage):
         self.x_range = x_range
         self.y_range = y_range
         self.z_range = z_range
-        self.x_position = x_range[1] - x_range[0] / 2
-        self.y_position = y_range[1] - y_range[0] / 2
-        self.z_position = z_range[1] - z_range[0] / 2
+        self.x_position = (x_range[1] - x_range[0]) / 2
+        self.y_position = (y_range[1] - y_range[0]) / 2
+        self.z_position = (z_range[1] - z_range[0]) / 2
 
     def move_x_to(self, absolute_x_position: float):
         if absolute_x_position < self.x_range[0] or absolute_x_position > self.x_range[1]:
@@ -170,8 +170,8 @@ class Microscope(interface.Microscope):
         }
 
 
-def microscope_factory(pixel_size: float, camera_height_pixels: int,
-                       camera_width_pixels: int, settings: dict, overview_image: np.ndarray):
+def microscope_factory(pixel_size: float, camera_height_pixels: int, camera_width_pixels: int, settings: dict,
+                       overview_image: np.ndarray, magnification: float, working_distance: float, numerical_aperture: float, immersion: str):
     '''Create a microscope object.
 
     Args:
@@ -189,4 +189,5 @@ def microscope_factory(pixel_size: float, camera_height_pixels: int,
 
     camera = Camera(pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
     stage = Stage((0, overview_image.shape[2]), (0, overview_image.shape[1]), (0, overview_image.shape[0]))
-    return Microscope(camera, stage)
+    objective = Objective(magnification, working_distance, numerical_aperture, immersion)
+    return Microscope(camera, stage, objective)

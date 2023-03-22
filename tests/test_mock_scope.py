@@ -8,9 +8,10 @@ from microscope_gym.mock_scope import Camera, Stage, Objective, Microscope, micr
 def test_camera_capture_image():
     settings = {"exposure_time": 100}
     overview_image = np.random.rand(10, 20, 30)
-    camera = Camera(pixel_size=1, height=20, width=10, settings=settings, overview_image=overview_image)
+    camera = Camera(pixel_size=1, height=5, width=2, settings=settings, overview_image=overview_image)
     image_slice = camera.capture_image(x=5, y=5, z=5)
-    assert image_slice.shape == (20, 10)
+    assert image_slice.shape == (5, 2)
+    np.testing.assert_array_equal(image_slice, overview_image[5, 5:10, 5:7])
 
 
 def test_camera_configure_camera():
@@ -66,16 +67,29 @@ def test_objective_constructor():
 # Microscope tests
 # Sample input for testing
 pixel_size = 0.1
-camera_height_pixels = 100
-camera_width_pixels = 200
+camera_height_pixels = 20
+camera_width_pixels = 40
 settings = {}
-overview_image = np.random.normal(size=(10, 100, 100))
+overview_image = np.random.normal(size=(10, 100, 200))
+magnification = 40
+working_distance = 5
+numerical_aperture = 0.95
+immersion = "oil"
 
 
 # microscope_factory tests
 def test_microscope_factory():
     # create microscope object using factory function
-    microscope = microscope_factory(pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
+    microscope = microscope_factory(
+        pixel_size,
+        camera_height_pixels,
+        camera_width_pixels,
+        settings,
+        overview_image,
+        magnification,
+        working_distance,
+        numerical_aperture,
+        immersion)
 
     # assert that object is an instance of Microscope class
     assert isinstance(microscope, interface.Microscope)
@@ -120,10 +134,22 @@ def test_microscope_constructor():
     assert isinstance(microscope.objective, interface.Objective)
 
 
-def test_microscope_capture_image():
-    # create microscope object using factory function
-    microscope = microscope_factory(pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
+@pytest.fixture
+def microscope():
+    microscope = microscope_factory(
+        pixel_size,
+        camera_height_pixels,
+        camera_width_pixels,
+        settings,
+        overview_image,
+        magnification,
+        working_distance,
+        numerical_aperture,
+        immersion)
+    return microscope
 
+
+def test_microscope_capture_image(microscope):
     # Move the stage to a specific position
     microscope.move_stage_to(50, 50, 5)
     x_pos, y_pos, z_pos = microscope.stage.x_position, microscope.stage.y_position, microscope.stage.z_position
@@ -134,13 +160,10 @@ def test_microscope_capture_image():
 
     # Check that the image was taken at the correct position
     assert np.allclose(img.mean(), overview_image[z_pos, int(y_pos):int(
-        y_pos) + camera_width_pixels, int(x_pos):int(x_pos) + camera_height_pixels].mean())
+        y_pos) + camera_height_pixels, int(x_pos):int(x_pos) + camera_width_pixels].mean())
 
 
-def test_microscope_get_metadata():
-    # create microscope object using factory function
-    microscope = microscope_factory(pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
-
+def test_microscope_get_metadata(microscope):
     metadata = microscope.get_metadata()
 
     # Check that the metadata contains the expected properties
@@ -151,10 +174,7 @@ def test_microscope_get_metadata():
     assert set(metadata['sample_dimensions'].keys()) == {'pixel_size', 'width', 'height'}
 
 
-def test_microscope_move_stage_to():
-    # create microscope object using factory function
-    microscope = microscope_factory(pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
-
+def test_microscope_move_stage_to(microscope):
     # Move the stage to a specific position
     microscope.move_stage_to(50, 50, 5)
     x_pos, y_pos, z_pos = microscope.stage.x_position, microscope.stage.y_position, microscope.stage.z_position
@@ -165,10 +185,7 @@ def test_microscope_move_stage_to():
     assert z_pos == 5
 
 
-def test_microscope_move_stage_by():
-    # create microscope object using factory function
-    microscope = microscope_factory(pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
-
+def test_microscope_move_stage_by(microscope):
     # record the starting position of the stage
     x_pos_start = microscope.stage.x_position
     y_pos_start = microscope.stage.y_position
