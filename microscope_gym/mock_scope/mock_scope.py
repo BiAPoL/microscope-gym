@@ -170,8 +170,8 @@ class Microscope(interface.Microscope):
         }
 
 
-def microscope_factory(pixel_size: float, camera_height_pixels: int, camera_width_pixels: int, settings: dict,
-                       overview_image: np.ndarray, magnification: float, working_distance: float, numerical_aperture: float, immersion: str):
+def microscope_factory(pixel_size=6.5, camera_height_pixels=512, camera_width_pixels=512, settings={},
+                       overview_image=np.random.normal(size=(10, 1024, 1024)), magnification=40.0, working_distance=0.29, numerical_aperture=0.95, immersion="air"):
     '''Create a microscope object.
 
     Args:
