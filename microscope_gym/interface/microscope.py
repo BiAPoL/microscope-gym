@@ -9,6 +9,7 @@ class Microscope(ABC):
         move_stage(x, y)
         capture_image()
         get_metadata()
+        get_stage_position()
 
     properties:
         camera(): camera object
@@ -33,4 +34,9 @@ class Microscope(ABC):
     @abstractmethod
     def get_metadata(self) -> "dict":
         '''Get metadata of microscope components and the corresponding pixel size and image dimensions in the sample.'''
+        pass
+
+    @abstractmethod
+    def get_stage_position(self) -> "tuple":
+        '''Get stage position in µm.'''
         pass

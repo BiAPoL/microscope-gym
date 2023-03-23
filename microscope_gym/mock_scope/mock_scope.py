@@ -169,6 +169,9 @@ class Microscope(interface.Microscope):
             }
         }
 
+    def get_stage_position(self):
+        return self.stage.x_position, self.stage.y_position, self.stage.z_position
+
 
 def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), camera_pixel_size=6.5, camera_height_pixels=512, camera_width_pixels=512, settings={},
                        objective_magnification=40.0, objective_working_distance=0.29, objective_numerical_aperture=0.95, objective_immersion="air"):
