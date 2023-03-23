@@ -13,15 +13,14 @@ python microscope (bad example)
 ```mermaid
 flowchart TD
     A[Smart feature] --> |uses| B(Microscope Gym API)
-    AA[Smart feature] --> |uses| B(Microscope Gym API)
-    AAA[Smart feature] --> |uses| B(Microscope Gym API)
-    AAAA[Smart feature] --> |uses| B(Microscope Gym API)
-    B -.-> |implemented by| C[Vendor 1 API adapter]
-    B -.-> |implemented by| D[Vendor 2 API adapter]
-    B -.-> |implemented by| E[Vendor 3 API adapter]
-    C --> |uses| F{{Microscope Vendor 1 API}}
-    D --> |uses| G{{Microscope Vendor 2 API}}
-    E --> |uses| H{{Microscope Vendor 3 API}}
+    AA[Smart feature] --> |uses| B
+    AAA[Smart feature] --> |uses| B
+    AAAA[Smart feature] --> |uses| B
+    B -.-> |implemented by| C[mock_scope]
+    B -.-> |implemented by| D[Vendor 1 API adapter]
+    B -.-> |implemented by| E[Vendor 2 API adapter]
+    D --> |uses| G{{Microscope Vendor 1 API}}
+    E --> |uses| H{{Microscope Vendor 2 API}}
 ```
 
 ### microscope GYM API
@@ -48,10 +47,14 @@ Versioned interface
 
 as few setter methods as possible
 
+## People that are involved
+
+* Jamie White
+* Hugo Sebastiao
+
 ## People that might be interested to get involved
 
 * Marcus Jahnel
-* Hugo (Jahnel lab)
 * Honki Moon (Java smart microscope software)
 * Benedict Diederich (from UC2 microscope)
 
@@ -60,4 +63,4 @@ as few setter methods as possible
 * [x] Schedule Meeting with Marcus and Hugo
 * [x] Create GitHub repository
 * [ ] order open uc2 microscope
-* [ ] write microscope emulator
+* [x] write microscope emulator
