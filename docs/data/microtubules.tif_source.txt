@@ -1,0 +1,1 @@
+This data is a tiff version of the file `2015-12-12_Run_1_AMPPNP_row_1_ATP_1_107.nd2` taken from the `sample_data.zip` from [Korten et al. 2018](https://zenodo.org/record/7403517).
