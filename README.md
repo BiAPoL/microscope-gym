@@ -1,5 +1,22 @@
 # Microscope Gym
 
+## Installation
+
+create a conda environment and install this repository
+
+```bash
+conda create -n microscope-gym-api python=3.9
+conda activate microscope-gym-api
+pip install git+https://gitlab.mn.tu-dresden.de/bia-pol/microscope-gym.git
+```
+
+if you want to run the notebooks from the documentation, it is recommended to install devbio-napari
+
+```bash
+conda install mamba
+mamba install devbio-napari
+```
+
 ## Code structure
 
 ```mermaid
