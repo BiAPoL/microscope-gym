@@ -3,17 +3,29 @@ from microscope_gym import interface
 
 
 class Camera(interface.Camera):
-    def __init__(self, pixel_size, height, width, settings, overview_image):
+    '''Camera class.
+
+    methods:
+        capture_image(x, y, z): numpy.ndarray
+            Capture image at x, y, z position in µm.
+        configure_camera(settings): None
+            Configure camera settings.
+
+    properties:
+        pixel_size(): float
+            Pixel size in µm.'''
+
+    def __init__(self, pixel_size, height_pixels, width_pixels, settings, overview_image):
         self.pixel_size = pixel_size
-        self.height = height
-        self.width = width
+        self.height_pixels = height_pixels
+        self.width_pixels = width_pixels
         self.settings = settings
         self.overview_image = overview_image
 
-    def capture_image(self, x, y, z):
-        return self.overview_image[int(z), int(y):int(y) + self.height, int(x):int(x) + self.width]
+    def capture_image(self, x: float, y: float, z: float) -> np.ndarray:
+        return self.overview_image[int(z), int(y):int(y) + self.height_pixels, int(x):int(x) + self.width_pixels]
 
-    def configure_camera(self, settings):
+    def configure_camera(self, settings: dict) -> None:
         self.settings = settings
 
 
@@ -147,8 +159,8 @@ class Microscope(interface.Microscope):
         return {
             'camera': {
                 'pixel_size': self.camera.pixel_size,
-                'width': self.camera.width,
-                'height': self.camera.height,
+                'width': self.camera.width_pixels,
+                'height': self.camera.height_pixels,
                 'settings': self.camera.settings
             },
             'stage': {
@@ -164,8 +176,8 @@ class Microscope(interface.Microscope):
             },
             'sample_dimensions': {
                 'pixel_size': self.camera.pixel_size / self.objective.magnification,
-                'width': self.camera.width * self.camera.pixel_size / self.objective.magnification,
-                'height': self.camera.height * self.camera.pixel_size / self.objective.magnification
+                'width': self.camera.width_pixels * self.camera.pixel_size / self.objective.magnification,
+                'height': self.camera.height_pixels * self.camera.pixel_size / self.objective.magnification
             }
         }
 
