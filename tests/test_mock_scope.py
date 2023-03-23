@@ -8,7 +8,7 @@ from microscope_gym.mock_scope import Camera, Stage, Objective, Microscope, micr
 def test_camera_capture_image():
     settings = {"exposure_time": 100}
     overview_image = np.random.rand(10, 20, 30)
-    camera = Camera(pixel_size=1, height=5, width=2, settings=settings, overview_image=overview_image)
+    camera = Camera(pixel_size=1, height_pixels=5, width_pixels=2, settings=settings, overview_image=overview_image)
     image_slice = camera.capture_image(x=5, y=5, z=5)
     assert image_slice.shape == (5, 2)
     np.testing.assert_array_equal(image_slice, overview_image[5, 5:10, 5:7])
@@ -17,7 +17,7 @@ def test_camera_capture_image():
 def test_camera_configure_camera():
     settings = {"exposure_time": 100}
     overview_image = np.random.rand(10, 20, 30)
-    camera = Camera(pixel_size=1, height=20, width=10, settings=settings, overview_image=overview_image)
+    camera = Camera(pixel_size=1, height_pixels=20, width_pixels=10, settings=settings, overview_image=overview_image)
     new_settings = {"exposure_time": 200}
     camera.configure_camera(settings=new_settings)
     assert camera.settings == new_settings
@@ -81,11 +81,11 @@ immersion = "oil"
 def test_microscope_factory():
     # create microscope object using factory function
     microscope = microscope_factory(
+        overview_image,
         pixel_size,
         camera_height_pixels,
         camera_width_pixels,
         settings,
-        overview_image,
         magnification,
         working_distance,
         numerical_aperture,
@@ -102,17 +102,17 @@ def test_microscope_factory():
 
     # assert that Camera object is correctly initialized
     assert microscope.camera.pixel_size == pixel_size
-    assert microscope.camera.height == camera_height_pixels
-    assert microscope.camera.width == camera_width_pixels
+    assert microscope.camera.height_pixels == camera_height_pixels
+    assert microscope.camera.width_pixels == camera_width_pixels
     assert microscope.camera.settings == settings
     np.testing.assert_array_equal(microscope.camera.overview_image, overview_image)
 
     # assert that Stage object is correctly initialized
-    np.testing.assert_array_equal(microscope.stage.x_range, [0, 200])
-    np.testing.assert_array_equal(microscope.stage.y_range, [0, 100])
+    np.testing.assert_array_equal(microscope.stage.x_range, [0, 160])
+    np.testing.assert_array_equal(microscope.stage.y_range, [0, 80])
     np.testing.assert_array_equal(microscope.stage.z_range, [0, 10])
-    assert microscope.stage.x_position == 100
-    assert microscope.stage.y_position == 50
+    assert microscope.stage.x_position == 80
+    assert microscope.stage.y_position == 40
     assert microscope.stage.z_position == 5
 
     # assert that Microscope object can capture an image without errors
@@ -134,14 +134,14 @@ def test_microscope_constructor():
     assert isinstance(microscope.objective, interface.Objective)
 
 
-@pytest.fixture
+@ pytest.fixture
 def microscope():
     microscope = microscope_factory(
+        overview_image,
         pixel_size,
         camera_height_pixels,
         camera_width_pixels,
         settings,
-        overview_image,
         magnification,
         working_distance,
         numerical_aperture,
