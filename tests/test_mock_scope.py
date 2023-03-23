@@ -116,7 +116,7 @@ def test_microscope_factory():
     assert microscope.stage.z_position == 4.5
 
     # assert that Microscope object can capture an image without errors
-    img = microscope.capture_image()
+    img = microscope.acquire_image()
     assert img.shape == (camera_height_pixels, camera_width_pixels)
 
 
