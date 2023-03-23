@@ -149,13 +149,13 @@ def microscope():
     return microscope
 
 
-def test_microscope_capture_image(microscope):
+def test_microscope_acquire_image(microscope):
     # Move the stage to a specific position
     microscope.move_stage_to(50, 50, 5)
     x_pos, y_pos, z_pos = microscope.stage.x_position, microscope.stage.y_position, microscope.stage.z_position
 
     # Capture an image and check that it has the expected shape
-    img = microscope.capture_image()
+    img = microscope.acquire_image()
     assert img.shape == (camera_height_pixels, camera_width_pixels)
 
     # Check that the image was taken at the correct position
