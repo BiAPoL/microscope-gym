@@ -14,7 +14,7 @@ class Camera(interface.Camera):
     properties:
         pixel_size(): float
             Pixel size in µm.
-            height_pixels(): int
+        height_pixels(): int
             Number of pixels in height.
         width_pixels(): int
             Number of pixels in width.
