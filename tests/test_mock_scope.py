@@ -151,16 +151,32 @@ def microscope():
 
 def test_microscope_acquire_image(microscope):
     # Move the stage to a specific position
-    microscope.move_stage_to(50, 50, 5)
-    x_pos, y_pos, z_pos = microscope.stage.x_position, microscope.stage.y_position, microscope.stage.z_position
+    microscope.move_stage_to(50, 40, 5)
 
     # Capture an image and check that it has the expected shape
     img = microscope.acquire_image()
     assert img.shape == (camera_height_pixels, camera_width_pixels)
 
     # Check that the image was taken at the correct position
-    assert np.allclose(img.mean(), overview_image[z_pos, int(y_pos):int(
-        y_pos) + camera_height_pixels, int(x_pos):int(x_pos) + camera_width_pixels].mean())
+    np.testing.assert_array_equal(
+        img, overview_image[5, 40:40 + camera_height_pixels, 50:50 + camera_width_pixels])
+
+
+def test_microscope_acquire_z_stack(microscope):
+    # Move the stage to a specific position
+    microscope.move_stage_to(50, 50, 5)
+    x_pos, y_pos, z_pos = microscope.stage.x_position, microscope.stage.y_position, microscope.stage.z_position
+
+    # Capture a z-stack and check that it has the expected shape
+    z_stack = microscope.acquire_z_stack(z_range=(1, 5), z_step=1)
+    assert z_stack.shape == (4, camera_height_pixels, camera_width_pixels)
+
+    # Check that the z-stack was taken at the correct position
+    np.testing.assert_array_equal(z_stack, overview_image[1:5, int(y_pos):int(
+        y_pos) + camera_height_pixels, int(x_pos):int(x_pos) + camera_width_pixels])
+
+    # Check that the z-position of the stage is unchanged
+    assert microscope.stage.z_position == z_pos
 
 
 def test_microscope_get_metadata(microscope):
