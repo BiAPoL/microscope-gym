@@ -161,7 +161,7 @@ class Microscope(interface.Microscope):
         if relative_z_position is not None:
             self.stage.move_z_by(relative_z_position)
 
-    def capture_image(self):
+    def acquire_image(self):
         return self.camera.capture_image(self.stage.x_position, self.stage.y_position, self.stage.z_position)
 
     def get_metadata(self):

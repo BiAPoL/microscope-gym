@@ -8,6 +8,7 @@ class Microscope(ABC):
     methods:
         move_stage(x, y)
         capture_image()
+        acquire_z_stack()
         get_metadata()
         get_stage_position()
 
@@ -27,8 +28,18 @@ class Microscope(ABC):
         pass
 
     @abstractmethod
-    def capture_image(self) -> "numpy.ndarray":
+    def acquire_image(self) -> "numpy.ndarray":
         '''Acquire new image.'''
+        pass
+
+    @abstractmethod
+    def acquire_z_stack(self, z_range: tuple, z_step: float) -> "numpy.ndarray":
+        '''Acquire z-stack.
+
+        Args:
+            z_range (tuple of float): range of z positions in µm
+            z_step (float): step size in µm
+        '''
         pass
 
     @abstractmethod
