@@ -164,6 +164,14 @@ class Microscope(interface.Microscope):
     def acquire_image(self):
         return self.camera.capture_image(self.stage.x_position, self.stage.y_position, self.stage.z_position)
 
+    def acquire_z_stack(self, z_range: tuple, z_step: float):
+        z_positions = np.arange(z_range[0], z_range[1], z_step)
+        images = []
+        for z in z_positions:
+            self.move_stage_to(absolute_z_position=z)
+            images.append(self.acquire_image())
+        return np.asarray(images)
+
     def get_metadata(self):
         return {
             'camera': {
