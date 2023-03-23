@@ -60,10 +60,12 @@ as few setter methods as possible
 
 * Jamie White
 * Hugo Sebastiao
+* Marcus Jahnel
+* Robert Haase
+* Bert Nitzsche
 
 ## People that might be interested to get involved
 
-* Marcus Jahnel
 * Honki Moon (Java smart microscope software)
 * Benedict Diederich (from UC2 microscope)
 
