@@ -1,13 +1,5 @@
 # Microscope Gym
 
-## Example microscope APIs
-
-[pycromanager (python API for micromanager)](https://github.com/micro-manager/pycro-manager) possible template for which kind methods to implement
-[openUC2 REST API](https://github.com/openUC2/UC2-REST)
-[Natari](https://github.com/haesleinhuepf/natari)
-
-python microscope (bad example)
-
 ## Code structure
 
 ```mermaid
@@ -64,3 +56,15 @@ as few setter methods as possible
 * [x] Create GitHub repository
 * [ ] order open uc2 microscope
 * [x] write microscope emulator
+* [x] write notebook explaining basic imaging api
+* [ ] write a notebook that uses napari to train an apoc model to identify microtubule crossings in the sample data
+* [ ] write smart feature that uses a trained apoc model generated in napari to find and imag certain features with the mock scope and then images a z-stack at the identified positions
+* [ ] create napari plugin that implements the above feature in napari
+
+## Example microscope APIs
+
+[pycromanager (python API for micromanager)](https://github.com/micro-manager/pycro-manager) possible template for which kind methods to implement
+[openUC2 REST API](https://github.com/openUC2/UC2-REST)
+[Natari](https://github.com/haesleinhuepf/natari)
+
+python microscope (bad example)
