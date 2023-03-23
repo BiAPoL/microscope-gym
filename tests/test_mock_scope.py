@@ -108,12 +108,12 @@ def test_microscope_factory():
     np.testing.assert_array_equal(microscope.camera.overview_image, overview_image)
 
     # assert that Stage object is correctly initialized
-    np.testing.assert_array_equal(microscope.stage.x_range, [0, 160])
-    np.testing.assert_array_equal(microscope.stage.y_range, [0, 80])
-    np.testing.assert_array_equal(microscope.stage.z_range, [0, 10])
-    assert microscope.stage.x_position == 80
-    assert microscope.stage.y_position == 40
-    assert microscope.stage.z_position == 5
+    np.testing.assert_array_equal(microscope.stage.x_range, [0, 159])
+    np.testing.assert_array_equal(microscope.stage.y_range, [0, 79])
+    np.testing.assert_array_equal(microscope.stage.z_range, [0, 9])
+    assert microscope.stage.x_position == 79.5
+    assert microscope.stage.y_position == 39.5
+    assert microscope.stage.z_position == 4.5
 
     # assert that Microscope object can capture an image without errors
     img = microscope.capture_image()
