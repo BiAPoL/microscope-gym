@@ -187,6 +187,11 @@ def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), c
             overview image
     '''
 
+    # makes sure that the overview image has at least 3 dimensions
+    while overview_image.ndim < 3:
+        overview_image = np.expand_dims(overview_image, axis=0)
+
+    # set up the microscope components
     camera = Camera(camera_pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
     stage = Stage((0, overview_image.shape[2]), (0, overview_image.shape[1] -
                   camera_height_pixels), (0, overview_image.shape[0] - camera_width_pixels))
