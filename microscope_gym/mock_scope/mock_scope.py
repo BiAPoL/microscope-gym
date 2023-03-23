@@ -13,7 +13,16 @@ class Camera(interface.Camera):
 
     properties:
         pixel_size(): float
-            Pixel size in µm.'''
+            Pixel size in µm.
+            height_pixels(): int
+            Number of pixels in height.
+        width_pixels(): int
+            Number of pixels in width.
+        settings(): dict
+            Camera settings.
+        overview_image(): numpy.ndarray
+            Overview image of the sample. In order to conform with the image dimensions commonly used in microscopy, the overview image should be a 3D array with dimensions (z, y, x).
+    '''
 
     def __init__(self, pixel_size, height_pixels, width_pixels, settings, overview_image):
         self.pixel_size = pixel_size
