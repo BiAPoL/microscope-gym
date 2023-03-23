@@ -170,8 +170,8 @@ class Microscope(interface.Microscope):
         }
 
 
-def microscope_factory(pixel_size=6.5, camera_height_pixels=512, camera_width_pixels=512, settings={},
-                       overview_image=np.random.normal(size=(10, 1024, 1024)), magnification=40.0, working_distance=0.29, numerical_aperture=0.95, immersion="air"):
+def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), camera_pixel_size=6.5, camera_height_pixels=512, camera_width_pixels=512, settings={},
+                       objective_magnification=40.0, objective_working_distance=0.29, objective_numerical_aperture=0.95, objective_immersion="air"):
     '''Create a microscope object.
 
     Args:
@@ -187,7 +187,11 @@ def microscope_factory(pixel_size=6.5, camera_height_pixels=512, camera_width_pi
             overview image
     '''
 
-    camera = Camera(pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
+    camera = Camera(camera_pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
     stage = Stage((0, overview_image.shape[2]), (0, overview_image.shape[1]), (0, overview_image.shape[0]))
-    objective = Objective(magnification, working_distance, numerical_aperture, immersion)
+    objective = Objective(
+        objective_magnification,
+        objective_working_distance,
+        objective_numerical_aperture,
+        objective_immersion)
     return Microscope(camera, stage, objective)
