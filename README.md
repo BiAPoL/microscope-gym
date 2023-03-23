@@ -10,7 +10,7 @@ conda activate microscope-gym-api
 pip install git+https://gitlab.mn.tu-dresden.de/bia-pol/microscope-gym.git
 ```
 
-if you want to run the notebooks from the documentation, it is recommended to install devbio-napari
+if you want to run the notebooks from the documentation, it is recommended to install devbio-napari into the same environment:
 
 ```bash
 conda install mamba
