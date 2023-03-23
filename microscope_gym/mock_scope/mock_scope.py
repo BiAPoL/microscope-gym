@@ -15,9 +15,9 @@ class Camera(interface.Camera):
         pixel_size(): float
             Pixel size in µm.
         height_pixels(): int
-            Number of pixels in height.
+            Height ov camera chip in pixels.
         width_pixels(): int
-            Number of pixels in width.
+            Width of camera chip in pixels.
         settings(): dict
             Camera settings.
         overview_image(): numpy.ndarray
