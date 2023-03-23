@@ -188,7 +188,8 @@ def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), c
     '''
 
     camera = Camera(camera_pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image)
-    stage = Stage((0, overview_image.shape[2]), (0, overview_image.shape[1]), (0, overview_image.shape[0]))
+    stage = Stage((0, overview_image.shape[2]), (0, overview_image.shape[1] -
+                  camera_height_pixels), (0, overview_image.shape[0] - camera_width_pixels))
     objective = Objective(
         objective_magnification,
         objective_working_distance,
