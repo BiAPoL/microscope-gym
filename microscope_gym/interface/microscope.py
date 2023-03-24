@@ -43,6 +43,32 @@ class Microscope(ABC):
         pass
 
     @abstractmethod
+    def acquire_tiled_image(self, x_range: tuple, y_range: tuple, z_range: tuple,
+                            x_step: float, y_step: float, z_step: float) -> "numpy.ndarray":
+        '''Acquire tiled image.
+
+        Args:
+            x_range (tuple of float): (optional)
+                range of x positions in µm, default is the whole stage range
+            y_range (tuple of float): (optional)
+                range of y positions in µm, default is the whole stage range
+            z_range (tuple of float): (optional)
+                range of z positions in µm, default is the current z position
+            x_step (float): (optional)
+                step size in µm, default is 90 % of the camera field of view
+            y_step (float): (optional)
+                step size in µm, default is 90 % of the camera field of view
+            z_step (float): (optional)
+                step size in µm, default is 1 µm
+        '''
+        pass
+
+    @abstractmethod
+    def acquire_overview_image(self) -> "numpy.ndarray":
+        '''Acquire overview image.'''
+        pass
+
+    @abstractmethod
     def get_metadata(self) -> "dict":
         '''Get metadata of microscope components and the corresponding pixel size and image dimensions in the sample.'''
         pass
