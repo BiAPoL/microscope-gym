@@ -175,37 +175,13 @@ class Microscope(interface.Microscope):
         self.move_stage_to(absolute_z_position=z_position_before)
         return np.asarray(images)
 
-    def acquire_tiled_image(self, x_range: tuple = (-np.inf, np.inf), y_range: tuple = (-np.inf, np.inf),
-                            z_range: tuple = None, x_step: float = None, y_step: float = None, z_step: float = 1) -> np.ndarray:
-        x_position_before = self.stage.x_position
-        y_position_before = self.stage.y_position
-        z_position_before = self.stage.z_position
-        if x_step is None:
-            x_step = self.camera.width_pixels * self.camera.pixel_size / self.objective.magnification * 0.9
-        if y_step is None:
-            y_step = self.camera.height_pixels * self.camera.pixel_size / self.objective.magnification * 0.9
-        if z_range is None:
-            z_positions = [z_position_before]
-        else:
-            z_positions = np.arange(z_range[0], z_range[1], z_step)
-        x_positions = np.arange(x_range[0], x_range[1], x_step)
-        y_positions = np.arange(y_range[0], y_range[1], y_step)
-        z_positions = np.arange(z_range[0], z_range[1], z_step)
-        images = []
-        for x in x_positions:
-            self.move_stage_to(absolute_x_position=x)
-            for y in y_positions:
-                self.move_stage_to(absolute_y_position=y)
-                z_stack = []
-                for z in z_positions:
-                    self.move_stage_to(absolute_z_position=z)
-                    z_stack.append(self.acquire_image())
-                images.append(z_stack)
-        self.move_stage_to(
-            absolute_x_position=x_position_before,
-            absolute_y_position=y_position_before,
-            absolute_z_position=z_position_before)
-        return np.asarray(images)
+    def acquire_tiled_image(self, x_range: tuple, y_range: tuple, x_step: float = None,
+                            y_step: float = None) -> np.ndarray:
+        return self._acquire_tiled(x_range, y_range, x_step=x_step, y_step=y_step)
+
+    def acquire_tiled_z_stack(self, x_range: tuple, y_range: tuple, z_range: tuple,
+                              x_step: float = None, y_step: float = None, z_step: float = 1.0) -> np.ndarray:
+        return self._acquire_tiled(x_range, y_range, z_range, x_step=x_step, y_step=y_step, z_step=z_step)
 
     def acquire_overview_image(self):
         return self.camera.overview_image
@@ -238,6 +214,29 @@ class Microscope(interface.Microscope):
 
     def get_stage_position(self):
         return self.stage.x_position, self.stage.y_position, self.stage.z_position
+
+    def _acquire_tiled(self, x_range: tuple, y_range: tuple,
+                       z_range: tuple = None, x_step: float = None, y_step: float = None, z_step: float = 1.0) -> np.ndarray:
+        x_position_before = self.stage.x_position
+        y_position_before = self.stage.y_position
+        if x_step is None:
+            x_step = self.camera.width_pixels * self.camera.pixel_size / self.objective.magnification * 0.9
+        if y_step is None:
+            y_step = self.camera.height_pixels * self.camera.pixel_size / self.objective.magnification * 0.9
+        if z_range is None:
+            image_function = self.acquire_image
+        else:
+            def image_function(): return self.acquire_z_stack(z_range, z_step)
+        x_positions = np.arange(x_range[0], x_range[1], x_step)
+        y_positions = np.arange(y_range[0], y_range[1], y_step)
+        images = []
+        for x in x_positions:
+            self.move_stage_to(absolute_x_position=x)
+            for y in y_positions:
+                self.move_stage_to(absolute_y_position=y)
+                images.append(image_function())
+        self.move_stage_to(absolute_x_position=x_position_before, absolute_y_position=y_position_before)
+        return np.asarray(images)
 
 
 def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), camera_pixel_size=6.5, camera_height_pixels=512, camera_width_pixels=512, settings={},

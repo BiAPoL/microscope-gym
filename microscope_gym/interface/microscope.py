@@ -43,23 +43,39 @@ class Microscope(ABC):
         pass
 
     @abstractmethod
-    def acquire_tiled_image(self, x_range: tuple, y_range: tuple, z_range: tuple,
-                            x_step: float, y_step: float, z_step: float) -> "numpy.ndarray":
+    def acquire_tiled_image(self, x_range: tuple, y_range: tuple, x_step: float, y_step: float) -> "numpy.ndarray":
         '''Acquire tiled image.
 
         Args:
-            x_range (tuple of float): (optional)
-                range of x positions in µm, default is the whole stage range
-            y_range (tuple of float): (optional)
-                range of y positions in µm, default is the whole stage range
-            z_range (tuple of float): (optional)
-                range of z positions in µm, default is the current z position
+            x_range (tuple of float):
+                range of x positions in µm
+            y_range (tuple of float):
+                range of y positions in µm
             x_step (float): (optional)
                 step size in µm, default is 90 % of the camera field of view
             y_step (float): (optional)
                 step size in µm, default is 90 % of the camera field of view
+        '''
+        pass
+
+    @abstractmethod
+    def acquire_tiled_z_stack(self, x_range: tuple, y_range: tuple, z_range: tuple,
+                              x_step: float, y_step: float, z_step: float) -> "numpy.ndarray":
+        '''Acquire tiled z-stack.
+
+        Args:
+            x_range (tuple of float):
+                range of x positions in µm
+            y_range (tuple of float):
+                range of y positions in µm
+            z_range (tuple of float):
+                range of z positions in µm
             z_step (float): (optional)
                 step size in µm, default is 1 µm
+            x_step (float): (optional)
+                step size in µm, default is 90 % of the camera field of view
+            y_step (float): (optional)
+                step size in µm, default is 90 % of the camera field of view
         '''
         pass
 
