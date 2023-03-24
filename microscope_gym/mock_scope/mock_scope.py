@@ -7,7 +7,7 @@ class Camera(interface.Camera):
 
     methods:
         capture_image(x, y, z): numpy.ndarray
-            Capture image at x, y, z position in µm. x, y, z are the top left corner of the image.
+            Capture image at x, y, z position in µm. x, y, z are the position of the top left corner of the image.
         configure_camera(settings): None
             Configure camera settings.
 
@@ -32,6 +32,7 @@ class Camera(interface.Camera):
         self.overview_image = overview_image
 
     def capture_image(self, x: float, y: float, z: float) -> np.ndarray:
+        '''Capture image at x, y, z position in µm. x, y, z are the position of the top left corner of the image.'''
         return self.overview_image[int(z), int(y):int(y) + self.height_pixels, int(x):int(x) + self.width_pixels]
 
     def configure_camera(self, settings: dict) -> None:
