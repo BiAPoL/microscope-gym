@@ -7,7 +7,7 @@ class Camera(interface.Camera):
 
     methods:
         capture_image(x, y, z): numpy.ndarray
-            Capture image at x, y, z position in µm.
+            Capture image at x, y, z position in µm. x, y, z are the top left corner of the image.
         configure_camera(settings): None
             Configure camera settings.
 
