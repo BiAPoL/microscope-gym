@@ -30,6 +30,7 @@ class Camera(interface.Camera):
         self.width_pixels = width_pixels
         self.settings = settings
         self.overview_image = overview_image
+        self.image_shape = (self.height_pixels, self.width_pixels)
 
     def capture_image(self, x: float, y: float, z: float) -> np.ndarray:
         '''Capture image at x, y, z position in µm. x, y, z are the position of the top left corner of the image.'''
@@ -192,7 +193,8 @@ class Microscope(interface.Microscope):
                 'pixel_size': self.camera.pixel_size,
                 'width': self.camera.width_pixels,
                 'height': self.camera.height_pixels,
-                'settings': self.camera.settings
+                'settings': self.camera.settings,
+                'image_shape': self.camera.image_shape
             },
             'stage': {
                 'x_range': self.stage.x_range,

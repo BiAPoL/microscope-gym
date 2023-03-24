@@ -19,6 +19,8 @@ class Camera(ABC):
             camera height in pixels
         settings(): dict
             camera settings
+        image_shape(): tuple
+            camera image shape
     '''
 
     @abstractmethod
