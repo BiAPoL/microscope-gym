@@ -27,6 +27,36 @@ class Stage(ABC):
             maximum allowed z range in µm
     '''
 
+    @property
+    def x_position(self):
+        return self._x_position
+
+    @x_position.setter
+    def x_position(self, value):
+        if value < self.x_range[0] or value > self.x_range[1]:
+            raise ValueError("X position out of range.")
+        self._x_position = value
+
+    @property
+    def y_position(self):
+        return self._y_position
+
+    @y_position.setter
+    def y_position(self, value):
+        if value < self.y_range[0] or value > self.y_range[1]:
+            raise ValueError("Y position out of range.")
+        self._y_position = value
+
+    @property
+    def z_position(self):
+        return self._z_position
+
+    @z_position.setter
+    def z_position(self, value):
+        if value < self.z_range[0] or value > self.z_range[1]:
+            raise ValueError("Z position out of range.")
+        self._z_position = value
+
     @abstractmethod
     def move_x_to(self, absolute_x_position: "float"):
         '''Move stage to absolute x position in µm.'''
