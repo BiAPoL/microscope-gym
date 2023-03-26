@@ -70,42 +70,57 @@ class Stage(interface.Stage):
         self.x_range = x_range
         self.y_range = y_range
         self.z_range = z_range
-        self.x_position = (x_range[1] - x_range[0]) / 2
-        self.y_position = (y_range[1] - y_range[0]) / 2
-        self.z_position = (z_range[1] - z_range[0]) / 2
+        self._x_position = (x_range[1] - x_range[0]) / 2
+        self._y_position = (y_range[1] - y_range[0]) / 2
+        self._z_position = (z_range[1] - z_range[0]) / 2
+
+    @property
+    def x_position(self):
+        return self._x_position
+
+    @x_position.setter
+    def x_position(self, value):
+        if value < self.x_range[0] or value > self.x_range[1]:
+            raise ValueError("X position out of range.")
+        self._x_position = value
+
+    @property
+    def y_position(self):
+        return self._y_position
+
+    @y_position.setter
+    def y_position(self, value):
+        if value < self.y_range[0] or value > self.y_range[1]:
+            raise ValueError("Y position out of range.")
+        self._y_position = value
+
+    @property
+    def z_position(self):
+        return self._z_position
+
+    @z_position.setter
+    def z_position(self, value):
+        if value < self.z_range[0] or value > self.z_range[1]:
+            raise ValueError("Z position out of range.")
+        self._z_position = value
 
     def move_x_to(self, absolute_x_position: float):
-        if absolute_x_position < self.x_range[0] or absolute_x_position > self.x_range[1]:
-            raise ValueError("X position out of range.")
         self.x_position = absolute_x_position
 
     def move_x_by(self, relative_x_position: float):
-        if self.x_position + relative_x_position < self.x_range[0] \
-                or self.x_position + relative_x_position > self.x_range[1]:
-            raise ValueError("X position out of range.")
-        self.x_position += relative_x_position
+        self.move_x_to(self.x_position + relative_x_position)
 
     def move_y_to(self, absolute_y_position: float):
-        if absolute_y_position < self.y_range[0] or absolute_y_position > self.y_range[1]:
-            raise ValueError("Y position out of range.")
         self.y_position = absolute_y_position
 
     def move_y_by(self, relative_y_position: float):
-        if self.y_position + relative_y_position < self.y_range[0] \
-                or self.y_position + relative_y_position > self.y_range[1]:
-            raise ValueError("Y position out of range.")
-        self.y_position += relative_y_position
+        self.move_y_to(self.y_position + relative_y_position)
 
     def move_z_to(self, absolute_z_position: float):
-        if absolute_z_position < self.z_range[0] or absolute_z_position > self.z_range[1]:
-            raise ValueError("Z position out of range.")
         self.z_position = absolute_z_position
 
     def move_z_by(self, relative_z_position: float):
-        if self.z_position + relative_z_position < self.z_range[0] \
-                or self.z_position + relative_z_position > self.z_range[1]:
-            raise ValueError("Z position out of range.")
-        self.z_position += relative_z_position
+        self.move_z_to(self.z_position + relative_z_position)
 
 
 class Objective(interface.Objective):
@@ -188,6 +203,9 @@ class Microscope(interface.Microscope):
         return self.camera.overview_image
 
     def get_metadata(self):
+        sample_pixel_size = self.camera.pixel_size / self.objective.magnification
+        width_um = self.camera.width_pixels * sample_pixel_size
+        height_um = self.camera.height_pixels * sample_pixel_size
         return {
             'camera': {
                 'pixel_size': self.camera.pixel_size,
@@ -208,23 +226,47 @@ class Microscope(interface.Microscope):
                 'immersion': self.objective.immersion
             },
             'sample_dimensions': {
-                'pixel_size': self.camera.pixel_size / self.objective.magnification,
-                'width': self.camera.width_pixels * self.camera.pixel_size / self.objective.magnification,
-                'height': self.camera.height_pixels * self.camera.pixel_size / self.objective.magnification
+                'pixel_size_um': sample_pixel_size,
+                'width_um': width_um,
+                'height_um': height_um,
+                'field_of_view_um': (height_um, width_um),
             }
         }
 
     def get_stage_position(self):
         return self.stage.x_position, self.stage.y_position, self.stage.z_position
 
+    def get_sample_pixel_size_um(self):
+        return self.camera.pixel_size / self.objective.magnification
+
+    def get_field_of_view_um(self):
+        sample_pixel_size = self.get_sample_pixel_size_um
+        width_um = self.camera.width_pixels * sample_pixel_size
+        height_um = self.camera.height_pixels * sample_pixel_size
+        return height_um, width_um
+
+    def scan_stage(self, x_range: tuple, y_range: tuple, x_step: float = None, y_step: float = None):
+        field_of_view = self.get_field_of_view_um()
+        if y_step is None:
+            y_step = field_of_view[0] * 0.9
+        if x_step is None:
+            x_step = field_of_view[1] * 0.9
+        x_steps = np.ceil(x_range[1] - x_range[0] / x_step)
+        y_steps = np.ceil(y_range[1] - y_range[0] / y_step)
+        x_positions = np.linspace(x_range[0], x_range[1], x_steps)
+        y_positions = np.linspace(y_range[0], y_range[1], y_steps)
+        all_x_positions, all_y_positions = np.meshgrid(x_positions, y_positions)
+        return all_y_positions, all_x_positions
+
     def _acquire_tiled(self, x_range: tuple, y_range: tuple,
                        z_range: tuple = None, x_step: float = None, y_step: float = None, z_step: float = 1.0) -> np.ndarray:
         x_position_before = self.stage.x_position
         y_position_before = self.stage.y_position
-        if x_step is None:
-            x_step = self.camera.width_pixels * self.camera.pixel_size / self.objective.magnification * 0.9
+        field_of_view = self.get_field_of_view_um()
         if y_step is None:
-            y_step = self.camera.height_pixels * self.camera.pixel_size / self.objective.magnification * 0.9
+            y_step = field_of_view[0] * 0.9
+        if x_step is None:
+            x_step = field_of_view[1] * 0.9
         if z_range is None:
             image_function = self.acquire_image
         else:
