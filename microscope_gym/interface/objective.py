@@ -1,5 +1,5 @@
 '''Microscope objective interface class.'''
-from abc import ABC, abstractmethod
+from abc import ABC
 
 
 class Objective(ABC):

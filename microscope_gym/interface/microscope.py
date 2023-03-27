@@ -1,5 +1,6 @@
-'''Microscope interface class.'''
+'''Microscope interface for microscope_gym.'''
 from abc import ABC, abstractmethod
+import numpy
 
 
 class Microscope(ABC):
