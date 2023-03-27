@@ -19,13 +19,13 @@ class Microscope(ABC):
     '''
 
     @abstractmethod
-    def move_stage_to(self, x: "float", y: "float", z: "float"):
-        '''Move stage to absolute x, y, z position in µm.'''
+    def move_stage_to(self, z: "float", y: "float", x: "float"):
+        '''Move stage to absolute z, y, x position in µm.'''
         pass
 
     @abstractmethod
-    def move_stage_by(self, x: "float", y: "float", z: "float"):
-        '''Move stage by relative x, y, z position in µm.'''
+    def move_stage_by(self, z: "float", y: "float", x: "float"):
+        '''Move stage by relative z, y, x position in µm.'''
         pass
 
     @abstractmethod
@@ -34,49 +34,56 @@ class Microscope(ABC):
         pass
 
     @abstractmethod
-    def acquire_z_stack(self, z_range: tuple, z_step: float) -> "numpy.ndarray":
+    def acquire_z_stack(self, z_range: tuple) -> "numpy.ndarray":
         '''Acquire z-stack.
 
         Args:
-            z_range (tuple of float): range of z positions in µm
-            z_step (float): step size in µm
+            z_range (tuple of float):
+                range of z positions in µm, works like the range() function argument (start, stop, step).
+                If step is not given, it defaults to 1 µm.
+                If only one argument is given, it is interpreted as the stop argument and start will be the minimum stage z range.
+                If z_range is None, the entire stage z range is used.
         '''
         pass
 
     @abstractmethod
-    def acquire_tiled_image(self, x_range: tuple, y_range: tuple, x_step: float, y_step: float) -> "numpy.ndarray":
+    def acquire_tiled_image(self, y_range: tuple, x_range: tuple) -> "numpy.ndarray":
         '''Acquire tiled image.
 
         Args:
-            x_range (tuple of float):
-                range of x positions in µm
             y_range (tuple of float):
-                range of y positions in µm
-            x_step (float): (optional)
-                step size in µm, default is 90 % of the camera field of view
-            y_step (float): (optional)
-                step size in µm, default is 90 % of the camera field of view
+                range of y positions in µm, works like the range() function argument (start, stop, step).
+                If step is not given, it defaults to 90 % of the camera field of view height.
+                If only one argument is given, it is interpreted as the stop argument and start will be the minimum stage y range.
+                If y_range is None, the entire stage y range is used.
+            x_range (tuple of float):
+                range of x positions in µm, works like the range() function argument (start, stop, step).
+                If step is not given, it defaults to 90 % of the camera field of view width.
+                If only one argument is given, it is interpreted as the stop argument and start will be the minimum stage x range.
+                If x_range is None, the entire stage x range is used.
         '''
         pass
 
     @abstractmethod
-    def acquire_tiled_z_stack(self, x_range: tuple, y_range: tuple, z_range: tuple,
-                              x_step: float, y_step: float, z_step: float) -> "numpy.ndarray":
+    def acquire_tiled_z_stack(self, z_range: tuple, y_range: tuple, x_range: tuple) -> "numpy.ndarray":
         '''Acquire tiled z-stack.
 
         Args:
-            x_range (tuple of float):
-                range of x positions in µm
-            y_range (tuple of float):
-                range of y positions in µm
             z_range (tuple of float):
-                range of z positions in µm
-            z_step (float): (optional)
-                step size in µm, default is 1 µm
-            x_step (float): (optional)
-                step size in µm, default is 90 % of the camera field of view
-            y_step (float): (optional)
-                step size in µm, default is 90 % of the camera field of view
+                range of z positions in µm, works like the range() function argument (start, stop, step).
+                If step is not given, it defaults to 1 µm.
+                If only one argument is given, it is interpreted as the stop argument and start will be the minimum stage z range.
+                If z_range is None, the entire stage z range is used.
+            y_range (tuple of float):
+                range of y positions in µm, works like the range() function argument (start, stop, step).
+                If step is not given, it defaults to 90 % of the camera field of view height.
+                If only one argument is given, it is interpreted as the stop argument and start will be the minimum stage y range.
+                If y_range is None, the entire stage y range is used.
+            x_range (tuple of float):
+                range of x positions in µm, works like the range() function argument (start, stop, step).
+                If step is not given, it defaults to 90 % of the camera field of view width.
+                If only one argument is given, it is interpreted as the stop argument and start will be the minimum stage x range.
+                If x_range is None, the entire stage x range is used.
         '''
         pass
 
