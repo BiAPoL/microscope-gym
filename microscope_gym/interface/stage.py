@@ -34,7 +34,7 @@ class Stage(ABC):
     @x_position.setter
     def x_position(self, value):
         if value < self.x_range[0] or value > self.x_range[1]:
-            raise ValueError("X position out of range.")
+            raise ValueError("Stage x position out of range.")
         self._x_position = value
 
     @property
@@ -44,7 +44,7 @@ class Stage(ABC):
     @y_position.setter
     def y_position(self, value):
         if value < self.y_range[0] or value > self.y_range[1]:
-            raise ValueError("Y position out of range.")
+            raise ValueError("Stage y position out of range.")
         self._y_position = value
 
     @property
@@ -54,7 +54,7 @@ class Stage(ABC):
     @z_position.setter
     def z_position(self, value):
         if value < self.z_range[0] or value > self.z_range[1]:
-            raise ValueError("Z position out of range.")
+            raise ValueError("Stage z position out of range.")
         self._z_position = value
 
     @abstractmethod
