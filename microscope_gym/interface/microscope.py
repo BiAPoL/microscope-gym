@@ -19,12 +19,12 @@ class Microscope(ABC):
     '''
 
     @abstractmethod
-    def move_stage_to(self, z: "float", y: "float", x: "float"):
+    def move_stage_to(self, z: float, y: float, x: float):
         '''Move stage to absolute z, y, x position in µm.'''
         pass
 
     @abstractmethod
-    def move_stage_by(self, z: "float", y: "float", x: "float"):
+    def move_stage_by(self, z: float, y: float, x: float):
         '''Move stage by relative z, y, x position in µm.'''
         pass
 
@@ -93,11 +93,14 @@ class Microscope(ABC):
         pass
 
     @abstractmethod
-    def get_metadata(self) -> "dict":
+    def get_metadata(self) -> dict:
         '''Get metadata of microscope components and the corresponding pixel size and image dimensions in the sample.'''
         pass
 
     @abstractmethod
-    def get_stage_position(self) -> "tuple":
+    def get_stage_position(self) -> tuple:
         '''Get stage position in µm.'''
         pass
+
+
+# make stage position getter and setter
