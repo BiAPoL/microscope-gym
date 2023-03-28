@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from microscope_gym import interface
 
 
@@ -41,23 +42,12 @@ class Stage(interface.Stage):
         # z, y and x position are defined in interface.Stage as properties.
         # The setter methods ensure that the new position is within the stage range.
 
-    def move_z_to(self, absolute_z_position: float):
-        self.z_position = absolute_z_position
+        # Set move timeout to 1 second.
+        # A real microscope would read the current move state of the microscope instead.
+        self._move_timeout = 1
 
-    def move_z_by(self, relative_z_position: float):
-        self.move_z_to(self.z_position + relative_z_position)
-
-    def move_y_to(self, absolute_y_position: float):
-        self.y_position = absolute_y_position
-
-    def move_y_by(self, relative_y_position: float):
-        self.move_y_to(self.y_position + relative_y_position)
-
-    def move_x_to(self, absolute_x_position: float):
-        self.x_position = absolute_x_position
-
-    def move_x_by(self, relative_x_position: float):
-        self.move_x_to(self.x_position + relative_x_position)
+        # set last move time to -1 to indicate that the stage is not moving
+        self._last_move_time = -1
 
 
 class Camera(interface.Camera):
@@ -141,19 +131,21 @@ class Microscope(interface.Microscope):
 
     def move_stage_to(self, absolute_z_position=None, absolute_y_position=None, absolute_x_position=None):
         if absolute_z_position is not None:
-            self.stage.move_z_to(absolute_z_position)
+            self.stage.z_position = absolute_z_position
         if absolute_y_position is not None:
-            self.stage.move_y_to(absolute_y_position)
+            self.stage.y_position = absolute_y_position
         if absolute_x_position is not None:
-            self.stage.move_x_to(absolute_x_position)
+            self.stage.x_position = absolute_x_position
+        self.stage.wait_for_move()
 
     def move_stage_by(self, relative_z_position=None, relative_y_position=None, relative_x_position=None):
         if relative_z_position is not None:
-            self.stage.move_z_by(relative_z_position)
+            self.stage.z_position += relative_z_position
         if relative_y_position is not None:
-            self.stage.move_y_by(relative_y_position)
+            self.stage.y_position += relative_y_position
         if relative_x_position is not None:
-            self.stage.move_x_by(relative_x_position)
+            self.stage.x_position += relative_x_position
+        self.stage.wait_for_move()
 
     def acquire_image(self):
         return self.camera.capture_image(self.stage.z_position, self.stage.y_position, self.stage.x_position)
@@ -179,6 +171,9 @@ class Microscope(interface.Microscope):
         return self.camera.overview_image
 
     def get_metadata(self):
+        '''Get metadata of the microscope.
+
+        In the future this should be OME compliant.'''
         sample_pixel_size = self.camera.pixel_size / self.objective.magnification
         width_um = self.camera.width_pixels * sample_pixel_size
         height_um = self.camera.height_pixels * sample_pixel_size
