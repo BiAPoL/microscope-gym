@@ -1,6 +1,8 @@
 '''Microscope objective interface class.'''
 from abc import ABC
 
+# TODO: refactor into real class
+
 
 class Objective(ABC):
     '''Microscope objective interface class.

@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import time
 
+# TODO: refactor into real class
+
 
 class Stage(ABC):
     '''Stage interface class.
@@ -13,13 +15,13 @@ class Stage(ABC):
         x_position: float
             x position in µm
         z_range: tuple
-            maximum allowed z range in µm
+            possible z range in µm
         y_range: tuple
-            maximum allowed y range in µm
+            possible y range in µm
         x_range: tuple
-            maximum allowed x range in µm
+            possible x range in µm
         is_moving: bool
-            True if stage is moving, false otherwise
+            True if stage is currently moving, false otherwise
     '''
 
     @property
@@ -29,7 +31,7 @@ class Stage(ABC):
     @z_position.setter
     def z_position(self, value):
         if value < self.z_range[0] or value > self.z_range[1]:
-            raise ValueError("Stage z position out of range.")
+            raise ValueError(f"Stage z position {value} out of range. {self.z_range}")
         self._last_move_time = time.time()
         self._z_position = value
 
@@ -40,7 +42,7 @@ class Stage(ABC):
     @y_position.setter
     def y_position(self, value):
         if value < self.y_range[0] or value > self.y_range[1]:
-            raise ValueError("Stage y position out of range.")
+            raise ValueError(f"Stage y position {value} out of range. {self.y_range}")
         self._last_move_time = time.time()
         self._y_position = value
 
@@ -51,7 +53,7 @@ class Stage(ABC):
     @x_position.setter
     def x_position(self, value):
         if value < self.x_range[0] or value > self.x_range[1]:
-            raise ValueError("Stage x position out of range.")
+            raise ValueError(f"Stage x position {value} out of range. {self.x_range}")
         self._last_move_time = time.time()
         self._x_position = value
 
@@ -59,6 +61,6 @@ class Stage(ABC):
     def is_moving(self):
         return time.time() - self._last_move_time < self._move_timeout
 
-    def wait_for_move(self):
+    def wait_for_move(self, check_interval=0.1):
         while self.is_moving:
-            time.sleep(0.1)
+            time.sleep(check_interval)
