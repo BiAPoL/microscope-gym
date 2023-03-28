@@ -1,16 +1,9 @@
 from abc import ABC, abstractmethod
+import time
 
 
 class Stage(ABC):
     '''Stage interface class.
-
-    methods:
-        move_z_to(absolute_z_position)
-        move_z_by(relative_z_position)
-        move_y_to(absolute_y_position)
-        move_y_by(relative_y_position)
-        move_x_to(absolute_x_position)
-        move_x_by(relative_x_position)
 
     properties:
         z_position: float
@@ -25,6 +18,8 @@ class Stage(ABC):
             maximum allowed y range in µm
         x_range: tuple
             maximum allowed x range in µm
+        is_moving: bool
+            True if stage is moving, false otherwise
     '''
 
     @property
@@ -35,6 +30,7 @@ class Stage(ABC):
     def z_position(self, value):
         if value < self.z_range[0] or value > self.z_range[1]:
             raise ValueError("Stage z position out of range.")
+        self._last_move_time = time.time()
         self._z_position = value
 
     @property
@@ -45,6 +41,7 @@ class Stage(ABC):
     def y_position(self, value):
         if value < self.y_range[0] or value > self.y_range[1]:
             raise ValueError("Stage y position out of range.")
+        self._last_move_time = time.time()
         self._y_position = value
 
     @property
@@ -55,34 +52,13 @@ class Stage(ABC):
     def x_position(self, value):
         if value < self.x_range[0] or value > self.x_range[1]:
             raise ValueError("Stage x position out of range.")
+        self._last_move_time = time.time()
         self._x_position = value
 
-    @abstractmethod
-    def move_z_to(self, absolute_z_position: "float"):
-        '''Move stage to absolute z position in µm.'''
-        pass
+    @property
+    def is_moving(self):
+        return time.time() - self._last_move_time < self._move_timeout
 
-    @abstractmethod
-    def move_z_by(self, relative_z_position: "float"):
-        '''Move stage by relative z position in µm.'''
-        pass
-
-    @abstractmethod
-    def move_y_to(self, absolute_y_position: "float"):
-        '''Move stage to absolute y position in µm.'''
-        pass
-
-    @abstractmethod
-    def move_y_by(self, relative_y_position: "float"):
-        '''Move stage by relative y position in µm.'''
-        pass
-
-    @abstractmethod
-    def move_x_to(self, absolute_x_position: "float"):
-        '''Move stage to absolute x position in µm.'''
-        pass
-
-    @abstractmethod
-    def move_x_by(self, relative_x_position: "float"):
-        '''Move stage by relative x position in µm.'''
-        pass
+    def wait_for_move(self):
+        while self.is_moving:
+            time.sleep(0.1)
