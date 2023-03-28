@@ -207,7 +207,7 @@ class Microscope(interface.Microscope):
         }
 
     def acquire_image(self):
-        return self.camera.capture_image(self.stage.z_position, self.stage.y_position, self.stage.x_position)
+        return self.camera.capture_image()
 
     def acquire_z_stack(self, z_range: tuple):
         z_position_before = self.stage.z_position
