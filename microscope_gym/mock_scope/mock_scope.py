@@ -176,7 +176,7 @@ class Microscope(interface.Microscope):
         '''Get metadata of the microscope.
 
         In the future this should be OME compliant.'''
-        sample_pixel_size = self.camera.pixel_size / self.objective.magnification
+        sample_pixel_size = self.get_sample_pixel_size_um
         width_um = self.camera.width_pixels * sample_pixel_size
         height_um = self.camera.height_pixels * sample_pixel_size
         return {
@@ -241,15 +241,6 @@ class Microscope(interface.Microscope):
             images.append(image_function())
         self.move_stage_to(absolute_y_position=y_position_before, absolute_x_position=x_position_before)
         return np.asarray(images)
-
-    def _set_range(self, range: tuple, default_range: tuple):
-        if len(range) < 1:
-            range = default_range
-        if len(range) < 2:
-            range = (default_range[0], range, default_range[2])
-        if len(range) < 3:
-            range = range + (default_range[2],)
-        return range
 
 
 def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), camera_pixel_size=6.5, camera_height_pixels=512, camera_width_pixels=512, settings={},
