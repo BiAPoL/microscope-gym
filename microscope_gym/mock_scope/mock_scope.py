@@ -42,12 +42,12 @@ class Stage(interface.Stage):
         # z, y and x position are defined in interface.Stage as properties.
         # The setter methods ensure that the new position is within the stage range.
 
-        # Set move timeout to 1 second.
+        # Set move timeout to 0.1 second.
         # A real microscope would read the current move state of the microscope instead.
-        self._move_timeout = 1
+        self._move_timeout = 0.1
 
         # set last move time to -1 to indicate that the stage is not moving
-        self._last_move_time = -1
+        self._last_move_time = -self._move_timeout
 
 
 class Camera(interface.Camera):
