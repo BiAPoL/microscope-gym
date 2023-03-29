@@ -1,7 +1,9 @@
 '''Microscope interface for microscope_gym.'''
 from abc import ABC, abstractmethod
-import numpy
-from microscope_gym.interface import Camera, Stage, Objective
+import numpy as np
+from .camera import Camera
+from .stage import Stage
+from .objective import Objective
 
 
 class Microscope(ABC):
@@ -20,7 +22,8 @@ class Microscope(ABC):
         objective(): Objective object
     '''
 
-    def __init__(self, camera: Camera, stage: Stage, objective: Objective):
+    def __init__(self, camera: Camera, stage: Stage,
+                 objective: Objective):
         self.camera = camera
         self.stage = stage
         self.objective = objective
@@ -83,7 +86,7 @@ class Microscope(ABC):
         pass
 
     @abstractmethod
-    def acquire_image(self) -> "numpy.ndarray":
+    def acquire_image(self) -> np.ndarray:
         '''Acquire new image.'''
         pass
 
@@ -107,7 +110,7 @@ class Microscope(ABC):
         self.move_stage_to(absolute_z_position=z_position_before)
         return np.asarray(images)
 
-    def acquire_tiled_image(self, y_range: tuple, x_range: tuple) -> numpy.ndarray:
+    def acquire_tiled_image(self, y_range: tuple, x_range: tuple) -> np.ndarray:
         '''Acquire tiled image.
 
         Args:
@@ -124,7 +127,7 @@ class Microscope(ABC):
         '''
         return self._acquire_tiled(y_range, x_range)
 
-    def acquire_tiled_z_stack(self, z_range: tuple, y_range: tuple, x_range: tuple) -> numpy.ndarray:
+    def acquire_tiled_z_stack(self, z_range: tuple, y_range: tuple, x_range: tuple) -> np.ndarray:
         '''Acquire tiled z-stack.
 
         Args:
@@ -147,7 +150,7 @@ class Microscope(ABC):
         return self._acquire_tiled(z_range, y_range, x_range)
 
     @abstractmethod
-    def acquire_overview_image(self) -> "numpy.ndarray":
+    def acquire_overview_image(self) -> np.ndarray:
         '''Acquire overview image that shows a larger part of the sample (often at lower resolution). Depends on the microscope vendor how this is implemented. It is recommended to use acquire_tiled_image instead if the overwiew image is used in an algorithm.'''
         pass
 
@@ -160,7 +163,7 @@ class Microscope(ABC):
             range = range + (default_range[2],)
         return range
 
-    def _acquire_tiled(self, z_range: tuple = (), y_range: tuple = (), x_range: tuple = ()) -> numpy.ndarray:
+    def _acquire_tiled(self, z_range: tuple = (), y_range: tuple = (), x_range: tuple = ()) -> np.ndarray:
         x_position_before = self.stage.x_position
         y_position_before = self.stage.y_position
         if z_range is None:

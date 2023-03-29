@@ -150,7 +150,7 @@ class Microscope(interface.Microscope):
         return self.camera.pixel_size / self.objective.magnification
 
     def get_field_of_view_um(self):
-        sample_pixel_size = self.get_sample_pixel_size_um
+        sample_pixel_size = self.get_sample_pixel_size_um()
         width_um = self.camera.width_pixels * sample_pixel_size
         height_um = self.camera.height_pixels * sample_pixel_size
         return np.asarray((height_um, width_um))
@@ -159,7 +159,7 @@ class Microscope(interface.Microscope):
         '''Get metadata of the microscope.
 
         In the future this should be OME compliant.'''
-        sample_pixel_size = self.get_sample_pixel_size_um
+        sample_pixel_size = self.get_sample_pixel_size_um()
         width_um = self.camera.width_pixels * sample_pixel_size
         height_um = self.camera.height_pixels * sample_pixel_size
         return {
