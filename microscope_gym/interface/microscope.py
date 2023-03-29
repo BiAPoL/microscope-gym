@@ -38,6 +38,30 @@ class Microscope(ABC):
         '''Move stage by relative z, y, x position in µm.'''
         pass
 
+    def get_nearest_position_in_range(self, z_position: float = None,
+                                      y_position: float = None, x_position: float = None):
+        '''Return nearest safe position to given position.
+
+        Parameters
+        ----------
+        position: tuple
+            position to check
+
+        Returns
+        -------
+        tuple
+            nearest safe position
+        '''
+        if z_position is None:
+            z_position = self.stage.z_position
+        if y_position is None:
+            y_position = self.stage.y_position
+        if x_position is None:
+            x_position = self.stage.x_position
+        return (max(self.stage.z_range[0], min(z_position, self.stage.z_range[1])),
+                max(self.stage.y_range[0], min(y_position, self.stage.y_range[1])),
+                max(self.stage.x_range[0], min(x_position, self.stage.x_range[1])))
+
     def scan_stage_positions(self, y_range: tuple = (), x_range: tuple = ()):
         '''Scan stage across ranges of the sample given in µm.
 
