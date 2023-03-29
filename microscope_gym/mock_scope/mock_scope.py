@@ -86,7 +86,6 @@ class Camera(interface.Camera):
         z, y, x = self.stage.z_position, self.stage.y_position, self.stage.x_position
         y_offset = self.height_pixels / 2
         x_offset = self.width_pixels / 2
-        print(f'Capturing image at z={z}, y={y}, x={x} (y_offset={y_offset}, x_offset={x_offset})')
         return self.overview_image[int(z), int(y - y_offset):int(y + y_offset), int(x - x_offset):int(x + x_offset)]
 
     def configure_camera(self, settings: dict) -> None:
