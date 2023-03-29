@@ -31,7 +31,7 @@ class Stage(ABC):
     @z_position.setter
     def z_position(self, value):
         if value < self.z_range[0] or value > self.z_range[1]:
-            raise ValueError(f"Stage z position {value} out of range. {self.z_range}")
+            raise ValueError(f"Stage z position {value} out of allowed range: {self.z_range}")
         self._last_move_time = time.time()
         self._z_position = value
 
@@ -42,7 +42,7 @@ class Stage(ABC):
     @y_position.setter
     def y_position(self, value):
         if value < self.y_range[0] or value > self.y_range[1]:
-            raise ValueError(f"Stage y position {value} out of range. {self.y_range}")
+            raise ValueError(f"Stage y position {value} out of allowed range: {self.y_range}")
         self._last_move_time = time.time()
         self._y_position = value
 
@@ -53,7 +53,7 @@ class Stage(ABC):
     @x_position.setter
     def x_position(self, value):
         if value < self.x_range[0] or value > self.x_range[1]:
-            raise ValueError(f"Stage x position {value} out of range. {self.x_range}")
+            raise ValueError(f"Stage x position {value} out of allowed range: {self.x_range}")
         self._last_move_time = time.time()
         self._x_position = value
 
