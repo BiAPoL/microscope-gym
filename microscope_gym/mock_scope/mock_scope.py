@@ -84,7 +84,10 @@ class Camera(interface.Camera):
     def capture_image(self) -> np.ndarray:
         '''Capture image the current stage position.'''
         z, y, x = self.stage.z_position, self.stage.y_position, self.stage.x_position
-        return self.overview_image[int(z), int(y):int(y) + self.height_pixels, int(x):int(x) + self.width_pixels]
+        y_offset = self.height_pixels / 2
+        x_offset = self.width_pixels / 2
+        print(f'Capturing image at z={z}, y={y}, x={x} (y_offset={y_offset}, x_offset={x_offset})')
+        return self.overview_image[int(z), int(y - y_offset):int(y + y_offset), int(x - x_offset):int(x + x_offset)]
 
     def configure_camera(self, settings: dict) -> None:
         self.settings = settings
@@ -218,9 +221,11 @@ def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), c
         overview_image = np.expand_dims(overview_image, axis=0)
 
     # set up the microscope components
-    stage = Stage((0, overview_image.shape[0] - 1),
-                  (0, overview_image.shape[1] - camera_height_pixels - 1),
-                  (0, overview_image.shape[2] - camera_width_pixels - 1))
+    y_offset = int(camera_height_pixels / 2)
+    x_offset = int(camera_width_pixels / 2)
+    stage = Stage(z_range=(0, overview_image.shape[0] - 1),
+                  y_range=(y_offset, overview_image.shape[1] - y_offset),
+                  x_range=(x_offset, overview_image.shape[2] - x_offset))
     camera = Camera(camera_pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image, stage)
     objective = Objective(
         objective_magnification,

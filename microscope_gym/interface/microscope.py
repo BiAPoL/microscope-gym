@@ -67,7 +67,7 @@ class Microscope(ABC):
 
     @abstractmethod
     def get_stage_position(self) -> tuple:
-        '''Get current stage position in µm. TODO: relative to the center of the field of view.'''
+        '''Get current stage position in µm. Positions are calculated relative to the center of the field of view.'''
         pass
 
     @abstractmethod
