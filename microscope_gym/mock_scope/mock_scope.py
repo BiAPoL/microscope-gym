@@ -41,10 +41,10 @@ class Stage(interface.Stage):
         # z, y and x position are defined in interface.Stage as properties.
         # The setter methods ensure that the new position is within the stage range.
 
-        # Set move timeout to 0.1 second.
-        self._move_timeout = 0.1
-        # set the polling interval to 0.11 second.
-        self._polling_interval = 0.11
+        # Set move timeout to 0.001 second.
+        self._move_timeout = 0.001
+        # set the polling interval to 0.001 second.
+        self._polling_interval = 0.001
 
         # set last move time to -1 to indicate that the stage is not moving
         self._last_move_time = -1
