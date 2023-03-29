@@ -7,6 +7,11 @@ import time
 class Stage(ABC):
     '''Stage interface class.
 
+    methods:
+        get_nearest_position_in_range(z_position: float, y_position: float, x_position: float) -> tuple
+            get nearest position in range
+        wait_until_stopped(timeout: float) -> bool
+
     properties:
         z_position: float
             z position in µm
@@ -23,6 +28,11 @@ class Stage(ABC):
         is_moving: bool
             True if stage is currently moving, false otherwise
     '''
+
+    def __init__(self, z_range: tuple, y_range: tuple, x_range: tuple):
+        self.z_range = z_range
+        self.y_range = y_range
+        self.x_range = x_range
 
     @property
     def z_position(self):
@@ -85,6 +95,6 @@ class Stage(ABC):
         pass
 
     @abstractmethod
-    def wait_for_move(self):
+    def wait_until_stopped(self):
         '''Wait until stage is not moving anymore.'''
         pass

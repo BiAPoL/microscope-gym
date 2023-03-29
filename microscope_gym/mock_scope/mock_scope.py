@@ -31,9 +31,7 @@ class Stage(interface.Stage):
     '''
 
     def __init__(self, z_range: tuple, y_range: tuple, x_range: tuple):
-        self.z_range = z_range
-        self.y_range = y_range
-        self.x_range = x_range
+        super().__init__(z_range, y_range, x_range)
 
         # Set initial position to center of stage.
         # A real microscope would read the current physical stage position instead.
@@ -82,7 +80,7 @@ class Stage(interface.Stage):
     def is_moving(self):
         return time.time() - self._last_move_time < self._move_timeout
 
-    def wait_for_move(self):
+    def wait_until_stopped(self):
         while self.is_moving:
             time.sleep(self._polling_interval)
 
@@ -150,7 +148,7 @@ class Microscope(interface.Microscope):
             self.stage.y_position = absolute_y_position
         if absolute_x_position is not None:
             self.stage.x_position = absolute_x_position
-        self.stage.wait_for_move()
+        self.stage.wait_until_stopped()
 
     def move_stage_by(self, relative_z_position=None, relative_y_position=None, relative_x_position=None):
         if relative_z_position is not None:
@@ -159,7 +157,7 @@ class Microscope(interface.Microscope):
             self.stage.y_position += relative_y_position
         if relative_x_position is not None:
             self.stage.x_position += relative_x_position
-        self.stage.wait_for_move()
+        self.stage.wait_until_stopped()
 
     def get_stage_position(self):
         return self.stage.x_position, self.stage.y_position, self.stage.z_position
