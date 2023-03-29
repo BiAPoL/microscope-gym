@@ -1,6 +1,7 @@
 import numpy as np
 import time
 from microscope_gym import interface
+from microscope_gym.interface import Objective
 
 
 class Stage(interface.Stage):
@@ -126,27 +127,6 @@ class Camera(interface.Camera):
 
     def configure_camera(self, settings: dict) -> None:
         self.settings = settings
-
-
-class Objective(interface.Objective):
-    '''Objective class.
-
-    properties:
-        magnification: float
-            magnification
-        working_distance: float
-            working distance in µm
-        numerical_aperture: float
-            numerical aperture
-        immersion: str
-            immersion medium
-    '''
-
-    def __init__(self, magnification: float, working_distance: float, numerical_aperture: float, immersion: str):
-        self.magnification = magnification
-        self.working_distance = working_distance
-        self.numerical_aperture = numerical_aperture
-        self.immersion = immersion
 
 
 class Microscope(interface.Microscope):
