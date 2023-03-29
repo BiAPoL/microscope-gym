@@ -54,6 +54,30 @@ class Stage(ABC):
             raise ValueError(f"Stage x position {value} out of allowed range: {self.x_range}")
         self._x_position = value
 
+    def get_nearest_position_in_range(self, z_position: float = None,
+                                      y_position: float = None, x_position: float = None):
+        '''Return nearest safe position to given position.
+
+        Parameters
+        ----------
+        position: tuple
+            position to check
+
+        Returns
+        -------
+        tuple
+            nearest safe position
+        '''
+        if z_position is None:
+            z_position = self.z_position
+        if y_position is None:
+            y_position = self.y_position
+        if x_position is None:
+            x_position = self.x_position
+        return (max(self.z_range[0], min(z_position, self.z_range[1])),
+                max(self.y_range[0], min(y_position, self.y_range[1])),
+                max(self.x_range[0], min(x_position, self.x_range[1])))
+
     @property
     @abstractmethod
     def is_moving(self):
