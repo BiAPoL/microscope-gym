@@ -23,12 +23,18 @@ class Camera(ABC):
             camera image shape (height, width) TODO: implement as getter
     '''
 
+    @property
+    def camera_settings(self):
+        return self._camera_settings
+
+    @camera_settings.setter
+    def camera_settings(self, value):
+        self.configure_camera(value)
+
     @abstractmethod
     def capture_image(self) -> "numpy.ndarray":
         '''Acquire new image.'''
         pass
-
-    # TODO: add setter for camera settings that calls configure_camera().
 
     @abstractmethod
     def configure_camera(self, settings: "dict"):
