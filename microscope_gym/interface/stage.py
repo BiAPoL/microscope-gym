@@ -32,7 +32,6 @@ class Stage(ABC):
     def z_position(self, value):
         if value < self.z_range[0] or value > self.z_range[1]:
             raise ValueError(f"Stage z position {value} out of allowed range: {self.z_range}")
-        self._last_move_time = time.time()
         self._z_position = value
 
     @property
@@ -43,7 +42,6 @@ class Stage(ABC):
     def y_position(self, value):
         if value < self.y_range[0] or value > self.y_range[1]:
             raise ValueError(f"Stage y position {value} out of allowed range: {self.y_range}")
-        self._last_move_time = time.time()
         self._y_position = value
 
     @property
@@ -54,13 +52,15 @@ class Stage(ABC):
     def x_position(self, value):
         if value < self.x_range[0] or value > self.x_range[1]:
             raise ValueError(f"Stage x position {value} out of allowed range: {self.x_range}")
-        self._last_move_time = time.time()
         self._x_position = value
 
     @property
+    @abstractmethod
     def is_moving(self):
-        return time.time() - self._last_move_time < self._move_timeout
+        '''Return True if stage is moving, False otherwise.'''
+        pass
 
-    def wait_for_move(self, check_interval=0.1):
-        while self.is_moving:
-            time.sleep(check_interval)
+    @abstractmethod
+    def wait_for_move(self):
+        '''Wait until stage is not moving anymore.'''
+        pass

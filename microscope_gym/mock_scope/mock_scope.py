@@ -43,11 +43,47 @@ class Stage(interface.Stage):
         # The setter methods ensure that the new position is within the stage range.
 
         # Set move timeout to 0.1 second.
-        # A real microscope would read the current move state of the microscope instead.
         self._move_timeout = 0.1
+        # set the polling interval to 0.11 second.
+        self._polling_interval = 0.11
 
         # set last move time to -1 to indicate that the stage is not moving
-        self._last_move_time = -self._move_timeout
+        self._last_move_time = -1
+
+    @property
+    def z_position(self):
+        return super().z_position
+
+    @z_position.setter
+    def z_position(self, value):
+        super(Stage, type(self)).z_position.fset(self, value)
+        self._last_move_time = time.time()
+
+    @property
+    def y_position(self):
+        return super().y_position
+
+    @y_position.setter
+    def y_position(self, value):
+        super(Stage, type(self)).y_position.fset(self, value)
+        self._last_move_time = time.time()
+
+    @property
+    def x_position(self):
+        return super().x_position
+
+    @x_position.setter
+    def x_position(self, value):
+        super(Stage, type(self)).x_position.fset(self, value)
+        self._last_move_time = time.time()
+
+    @property
+    def is_moving(self):
+        return time.time() - self._last_move_time < self._move_timeout
+
+    def wait_for_move(self):
+        while self.is_moving:
+            time.sleep(self._polling_interval)
 
 
 class Camera(interface.Camera):
