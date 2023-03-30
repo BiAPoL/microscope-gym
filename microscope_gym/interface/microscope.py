@@ -32,15 +32,23 @@ class Microscope(ABC):
         self.stage = stage
         self.objective = objective
 
-    @abstractmethod
-    def move_stage_to(self, z: float, y: float, x: float):
-        '''Move stage to absolute z, y, x position in µm.'''
-        pass
+    def move_stage_to(self, absolute_z_position=None, absolute_y_position=None, absolute_x_position=None):
+        if absolute_z_position is not None:
+            self.stage.z_position = absolute_z_position
+        if absolute_y_position is not None:
+            self.stage.y_position = absolute_y_position
+        if absolute_x_position is not None:
+            self.stage.x_position = absolute_x_position
+        self.stage.wait_until_stopped()
 
-    @abstractmethod
-    def move_stage_by(self, z: float, y: float, x: float):
-        '''Move stage by relative z, y, x position in µm.'''
-        pass
+    def move_stage_by(self, relative_z_position=None, relative_y_position=None, relative_x_position=None):
+        if relative_z_position is not None:
+            self.stage.z_position += relative_z_position
+        if relative_y_position is not None:
+            self.stage.y_position += relative_y_position
+        if relative_x_position is not None:
+            self.stage.x_position += relative_x_position
+        self.stage.wait_until_stopped()
 
     def get_nearest_position_in_range(self, z_position: float = None,
                                       y_position: float = None, x_position: float = None):
@@ -98,8 +106,8 @@ class Microscope(ABC):
         default_step = self.get_field_of_view_um() * 0.9
         y_range = self._set_range(y_range, default_range=self.stage.y_range + (default_step[0],))
         x_range = self._set_range(x_range, default_range=self.stage.x_range + (default_step[1],))
-        x_steps = np.ceil(x_range[1] - x_range[0] / x_range[2])
-        y_steps = np.ceil(y_range[1] - y_range[0] / y_range[2])
+        x_steps = int(np.ceil((x_range[1] - x_range[0]) / x_range[2]))
+        y_steps = int(np.ceil((y_range[1] - y_range[0]) / y_range[2]))
         x_positions = np.linspace(x_range[0], x_range[1], x_steps)
         y_positions = np.linspace(y_range[0], y_range[1], y_steps)
         all_x_positions, all_y_positions = np.meshgrid(x_positions, y_positions)
@@ -107,30 +115,25 @@ class Microscope(ABC):
             self.move_stage_to(absolute_y_position=y, absolute_x_position=x)
             yield y, x
 
-    @abstractmethod
-    def get_stage_position(self) -> tuple:
-        '''Get current stage position in µm. Positions are calculated relative to the center of the field of view.'''
-        pass
+    def get_stage_position(self):
+        return self.stage.x_position, self.stage.y_position, self.stage.z_position
 
-    @abstractmethod
-    def get_sample_pixel_size_um(self) -> float:
-        '''Get pixel size in sample space in µm. Calculated from camera pixel size and objective magnification.'''
-        pass
+    def get_sample_pixel_size_um(self):
+        return self.camera.pixel_size / self.objective.magnification
 
-    @abstractmethod
-    def get_field_of_view_um(self) -> tuple:
-        '''Get field of view in µm. calculated from camera pixel size and image dimensions as well as objective magnification.'''
-        pass
+    def get_field_of_view_um(self):
+        sample_pixel_size = self.get_sample_pixel_size_um()
+        width_um = self.camera.width_pixels * sample_pixel_size
+        height_um = self.camera.height_pixels * sample_pixel_size
+        return np.asarray((height_um, width_um))
 
     @abstractmethod
     def get_metadata(self) -> dict:
         '''Get metadata in OME-XML format.'''
         pass
 
-    @abstractmethod
-    def acquire_image(self) -> np.ndarray:
-        '''Acquire new image.'''
-        pass
+    def acquire_image(self):
+        return self.camera.capture_image()
 
     def acquire_z_stack(self, z_range: tuple = ()):
         '''Acquire z-stack.
