@@ -127,6 +127,16 @@ class Microscope(ABC):
         height_um = self.camera.height_pixels * sample_pixel_size
         return np.asarray((height_um, width_um))
 
+    def get_stage_offset_from_pixel_coordinates(self, pixel_coordinates: tuple):
+        '''Get stage offset in µm from pixel coordinates.
+
+        Args:
+            pixel_coordinates (y, x): pixel coordinates of the camera
+        '''
+        image_center = np.asarray((self.camera.height_pixels, self.camera.width_pixels)) / 2
+        pixel_offset = np.asarray(pixel_coordinates) - image_center
+        return pixel_offset * self.get_sample_pixel_size_um()
+
     def acquire_image(self):
         return self.camera.capture_image()
 
