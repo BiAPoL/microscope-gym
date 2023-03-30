@@ -141,36 +141,6 @@ class Microscope(interface.Microscope):
         objective(): Objective object
     '''
 
-    def move_stage_to(self, absolute_z_position=None, absolute_y_position=None, absolute_x_position=None):
-        if absolute_z_position is not None:
-            self.stage.z_position = absolute_z_position
-        if absolute_y_position is not None:
-            self.stage.y_position = absolute_y_position
-        if absolute_x_position is not None:
-            self.stage.x_position = absolute_x_position
-        self.stage.wait_until_stopped()
-
-    def move_stage_by(self, relative_z_position=None, relative_y_position=None, relative_x_position=None):
-        if relative_z_position is not None:
-            self.stage.z_position += relative_z_position
-        if relative_y_position is not None:
-            self.stage.y_position += relative_y_position
-        if relative_x_position is not None:
-            self.stage.x_position += relative_x_position
-        self.stage.wait_until_stopped()
-
-    def get_stage_position(self):
-        return self.stage.x_position, self.stage.y_position, self.stage.z_position
-
-    def get_sample_pixel_size_um(self):
-        return self.camera.pixel_size / self.objective.magnification
-
-    def get_field_of_view_um(self):
-        sample_pixel_size = self.get_sample_pixel_size_um()
-        width_um = self.camera.width_pixels * sample_pixel_size
-        height_um = self.camera.height_pixels * sample_pixel_size
-        return np.asarray((height_um, width_um))
-
     def get_metadata(self):
         '''Get metadata of the microscope.
 
@@ -205,15 +175,12 @@ class Microscope(interface.Microscope):
             }
         }
 
-    def acquire_image(self):
-        return self.camera.capture_image()
-
     def acquire_overview_image(self):
         return self.camera.overview_image
 
 
-def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), camera_pixel_size=6.5, camera_height_pixels=512, camera_width_pixels=512, settings={},
-                       objective_magnification=40.0, objective_working_distance=0.29, objective_numerical_aperture=0.95, objective_immersion="air"):
+def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), camera_pixel_size=1, camera_height_pixels=512, camera_width_pixels=512, settings={},
+                       objective_magnification=1, objective_working_distance=0.29, objective_numerical_aperture=0.95, objective_immersion="air"):
     '''Create a microscope object.
 
     Args:
