@@ -116,7 +116,7 @@ class Microscope(ABC):
             yield y, x
 
     def get_stage_position(self):
-        return self.stage.x_position, self.stage.y_position, self.stage.z_position
+        return self.stage.z_position, self.stage.y_position, self.stage.x_position
 
     def get_sample_pixel_size_um(self):
         return self.camera.pixel_size / self.objective.magnification
