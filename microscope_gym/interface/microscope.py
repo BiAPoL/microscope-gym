@@ -1,4 +1,8 @@
-'''Microscope interface for microscope_gym.'''
+'''Microscope interface for microscope_gym.
+
+TODO: consider using pydantic for validation'''
+
+
 from abc import ABC, abstractmethod
 import numpy as np
 from .camera import Camera
