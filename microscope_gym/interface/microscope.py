@@ -114,7 +114,7 @@ class Microscope(ABC):
         '''Acquire new image.'''
         pass
 
-    def acquire_z_stack(self, z_range: tuple):
+    def acquire_z_stack(self, z_range: tuple = ()):
         '''Acquire z-stack.
 
         Args:
