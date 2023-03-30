@@ -127,11 +127,6 @@ class Microscope(ABC):
         height_um = self.camera.height_pixels * sample_pixel_size
         return np.asarray((height_um, width_um))
 
-    @abstractmethod
-    def get_metadata(self) -> dict:
-        '''Get metadata in OME-XML format.'''
-        pass
-
     def acquire_image(self):
         return self.camera.capture_image()
 
@@ -197,6 +192,11 @@ class Microscope(ABC):
     @abstractmethod
     def acquire_overview_image(self) -> np.ndarray:
         '''Acquire overview image that shows a larger part of the sample (often at lower resolution). Depends on the microscope vendor how this is implemented. It is recommended to use acquire_tiled_image instead if the overwiew image is used in an algorithm.'''
+        pass
+
+    @abstractmethod
+    def get_metadata(self) -> dict:
+        '''Get metadata in OME-XML format.'''
         pass
 
     def _set_range(self, range: tuple, default_range: tuple):
