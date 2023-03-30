@@ -35,9 +35,9 @@ class Stage(interface.Stage):
 
         # Set initial position to center of stage.
         # A real microscope would read the current physical stage position instead.
-        self._z_position = (z_range[1] - z_range[0]) / 2
-        self._y_position = (y_range[1] - y_range[0]) / 2
-        self._x_position = (x_range[1] - x_range[0]) / 2
+        self._z_position = (z_range[1] - z_range[0]) / 2 + z_range[0]
+        self._y_position = (y_range[1] - y_range[0]) / 2 + y_range[0]
+        self._x_position = (x_range[1] - x_range[0]) / 2 + x_range[0]
         # z, y and x position are defined in interface.Stage as properties.
         # The setter methods ensure that the new position is within the stage range.
 
@@ -236,7 +236,7 @@ def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), c
     # set up the microscope components
     y_offset = int(camera_height_pixels / 2)
     x_offset = int(camera_width_pixels / 2)
-    stage = Stage(z_range=(0, overview_image.shape[0] - 1),
+    stage = Stage(z_range=(0, overview_image.shape[0]),
                   y_range=(y_offset, overview_image.shape[1] - y_offset),
                   x_range=(x_offset, overview_image.shape[2] - x_offset))
     camera = Camera(camera_pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image, stage)
