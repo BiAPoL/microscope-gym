@@ -1,6 +1,7 @@
 import numpy as np
 import time
 from microscope_gym import interface
+from microscope_gym.interface.stage import Axis
 from microscope_gym.interface import Objective
 
 
@@ -8,19 +9,19 @@ class Stage(interface.Stage):
     '''Stage class.
 
     methods:
-        move_x_to(absolute_x_position)
-        move_x_by(relative_x_position)
-        move_y_to(absolute_y_position)
-        move_y_by(relative_y_position)
-        move_z_to(absolute_z_position)
-        move_z_by(relative_z_position)
+        move_x_to(absolute_x_position_um)
+        move_x_by(relative_x_position_um)
+        move_y_to(absolute_y_position_um)
+        move_y_by(relative_y_position_um)
+        move_z_to(absolute_z_position_um)
+        move_z_by(relative_z_position_um)
 
     properties:
-        z_position(): float
+        z_position_um(): float
             z position in µm
-        y_position(): float
+        y_position_um(): float
             y position in µm
-        x_position(): float
+        x_position_um(): float
             x position in µm
         z_range(): tuple
             z range in µm
@@ -30,16 +31,8 @@ class Stage(interface.Stage):
             x range in µm
     '''
 
-    def __init__(self, z_range: tuple, y_range: tuple, x_range: tuple):
-        super().__init__(z_range, y_range, x_range)
-
-        # Set initial position to center of stage.
-        # A real microscope would read the current physical stage position instead.
-        self._z_position = (z_range[1] - z_range[0]) / 2 + z_range[0]
-        self._y_position = (y_range[1] - y_range[0]) / 2 + y_range[0]
-        self._x_position = (x_range[1] - x_range[0]) / 2 + x_range[0]
-        # z, y and x position are defined in interface.Stage as properties.
-        # The setter methods ensure that the new position is within the stage range.
+    def __init__(self, axes: list):
+        super().__init__(axes)
 
         # Set move timeout to 0.001 second.
         self._move_timeout = 0.001
@@ -50,39 +43,35 @@ class Stage(interface.Stage):
         self._last_move_time = -1
 
     @property
-    def z_position(self):
-        return super().z_position
+    def z_position_um(self):
+        return super().z_position_um
 
-    @z_position.setter
-    def z_position(self, value):
-        super(Stage, type(self)).z_position.fset(self, value)
+    @z_position_um.setter
+    def z_position_um(self, value):
+        super(Stage, type(self)).z_position_um.fset(self, value)
         self._last_move_time = time.time()
 
     @property
-    def y_position(self):
-        return super().y_position
+    def y_position_um(self):
+        return super().y_position_um
 
-    @y_position.setter
-    def y_position(self, value):
-        super(Stage, type(self)).y_position.fset(self, value)
+    @y_position_um.setter
+    def y_position_um(self, value):
+        super(Stage, type(self)).y_position_um.fset(self, value)
         self._last_move_time = time.time()
 
     @property
-    def x_position(self):
-        return super().x_position
+    def x_position_um(self):
+        return super().x_position_um
 
-    @x_position.setter
-    def x_position(self, value):
-        super(Stage, type(self)).x_position.fset(self, value)
+    @x_position_um.setter
+    def x_position_um(self, value):
+        super(Stage, type(self)).x_position_um.fset(self, value)
         self._last_move_time = time.time()
 
     @property
     def is_moving(self):
         return time.time() - self._last_move_time < self._move_timeout
-
-    def wait_until_stopped(self):
-        while self.is_moving:
-            time.sleep(self._polling_interval)
 
 
 class Camera(interface.Camera):
@@ -118,7 +107,7 @@ class Camera(interface.Camera):
 
     def capture_image(self) -> np.ndarray:
         '''Capture image the current stage position.'''
-        z, y, x = self.stage.z_position, self.stage.y_position, self.stage.x_position
+        z, y, x = self.stage.z_position_um, self.stage.y_position_um, self.stage.x_position_um
         y_offset = self.height_pixels / 2
         x_offset = self.width_pixels / 2
         return self.overview_image[int(z), int(y - y_offset):int(y + y_offset), int(x - x_offset):int(x + x_offset)]
@@ -203,9 +192,17 @@ def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), c
     # set up the microscope components
     y_offset = int(camera_height_pixels / 2)
     x_offset = int(camera_width_pixels / 2)
-    stage = Stage(z_range=(0, overview_image.shape[0]),
-                  y_range=(y_offset, overview_image.shape[1] - y_offset),
-                  x_range=(x_offset, overview_image.shape[2] - x_offset))
+    z_range = (0, overview_image.shape[0])
+    y_range = (y_offset, overview_image.shape[1] - y_offset)
+    x_range = (x_offset, overview_image.shape[2] - x_offset)
+    z_position_um = int((z_range[1] - z_range[0]) / 2)
+    y_position_um = int((y_range[1] - y_range[0]) / 2)
+    x_position_um = int((x_range[1] - x_range[0]) / 2)
+
+    axes = [Axis(name='z', position_um=z_position_um, min=z_range[0], max=z_range[1]),
+            Axis(name='y', position_um=y_position_um, min=y_range[0], max=y_range[1]),
+            Axis(name='x', position_um=x_position_um, min=x_range[0], max=x_range[1])]
+    stage = Stage(axes)
     camera = Camera(camera_pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image, stage)
     objective = Objective(
         objective_magnification,

@@ -86,7 +86,7 @@ class SmartObjectFinder:
         # Acquire images at the given positions
         images = []
         for y, x in imaging_positions:
-            self.microscope.move_stage_to_nearest_position_in_range(y_position=y, x_position=x)
+            self.microscope.move_stage_to_nearest_position_in_range(y_position_um=y, x_position_um=x)
             images.append(imaging_function())
 
         return images
@@ -154,7 +154,7 @@ class SmartObjectFinder:
                 offset = self.microscope.get_stage_offset_from_pixel_coordinates(pixel_coordinates)
                 y_new = y + offset[0]
                 x_new = x + offset[1]
-                self.microscope.move_stage_to_nearest_position_in_range(y_position=y_new, x_position=x_new)
+                self.microscope.move_stage_to_nearest_position_in_range(y_position_um=y_new, x_position_um=x_new)
                 # save the image
                 images.append(imaging_function())
 

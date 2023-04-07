@@ -4,9 +4,10 @@ TODO: consider using pydantic for validation'''
 
 
 from abc import ABC, abstractmethod
+from pydantic import ValidationError
 import numpy as np
 from .camera import Camera
-from .stage import Stage
+from .stage import Stage, get_nearest_position_in_range
 from .objective import Objective
 
 
@@ -32,50 +33,26 @@ class Microscope(ABC):
         self.stage = stage
         self.objective = objective
 
-    def move_stage_to(self, absolute_z_position=None, absolute_y_position=None, absolute_x_position=None):
-        if absolute_z_position is not None:
-            self.stage.z_position = absolute_z_position
-        if absolute_y_position is not None:
-            self.stage.y_position = absolute_y_position
-        if absolute_x_position is not None:
-            self.stage.x_position = absolute_x_position
+    def move_stage_to(self, absolute_z_position_um=None, absolute_y_position_um=None, absolute_x_position_um=None):
+        if absolute_z_position_um is not None:
+            self.stage.z_position_um = absolute_z_position_um
+        if absolute_y_position_um is not None:
+            self.stage.y_position_um = absolute_y_position_um
+        if absolute_x_position_um is not None:
+            self.stage.x_position_um = absolute_x_position_um
         self.stage.wait_until_stopped()
 
-    def move_stage_by(self, relative_z_position=None, relative_y_position=None, relative_x_position=None):
-        if relative_z_position is not None:
-            self.stage.z_position += relative_z_position
-        if relative_y_position is not None:
-            self.stage.y_position += relative_y_position
-        if relative_x_position is not None:
-            self.stage.x_position += relative_x_position
+    def move_stage_by(self, relative_z_position_um=None, relative_y_position_um=None, relative_x_position_um=None):
+        if relative_z_position_um is not None:
+            self.stage.z_position_um += relative_z_position_um
+        if relative_y_position_um is not None:
+            self.stage.y_position_um += relative_y_position_um
+        if relative_x_position_um is not None:
+            self.stage.x_position_um += relative_x_position_um
         self.stage.wait_until_stopped()
 
-    def get_nearest_position_in_range(self, z_position: float = None,
-                                      y_position: float = None, x_position: float = None):
-        '''Return nearest safe position to given position.
-
-        Parameters
-        ----------
-        position: tuple
-            position to check
-
-        Returns
-        -------
-        tuple
-            nearest safe position
-        '''
-        if z_position is None:
-            z_position = self.stage.z_position
-        if y_position is None:
-            y_position = self.stage.y_position
-        if x_position is None:
-            x_position = self.stage.x_position
-        return (max(self.stage.z_range[0], min(z_position, self.stage.z_range[1])),
-                max(self.stage.y_range[0], min(y_position, self.stage.y_range[1])),
-                max(self.stage.x_range[0], min(x_position, self.stage.x_range[1])))
-
-    def move_stage_to_nearest_position_in_range(self, z_position: float = None,
-                                                y_position: float = None, x_position: float = None):
+    def move_stage_to_nearest_position_in_range(self, z_position_um: float = None,
+                                                y_position_um: float = None, x_position_um: float = None):
         '''Move stage to nearest safe position to given position.
 
         Parameters
@@ -84,9 +61,10 @@ class Microscope(ABC):
             position to check
         '''
         try:
-            self.move_stage_to(z_position, y_position, x_position)
-        except ValueError:
-            self.move_stage_to(*self.get_nearest_position_in_range(z_position, y_position, x_position))
+            self.move_stage_to(z_position_um, y_position_um, x_position_um)
+        except ValidationError:
+            self.stage.position_um = self.stage.get_nearest_position_in_range(
+                z_position_um, y_position_um, x_position_um)
 
     def scan_stage_positions(self, y_range: tuple = (), x_range: tuple = ()):
         '''Scan stage across ranges of the sample given in µm.
@@ -112,11 +90,11 @@ class Microscope(ABC):
         y_positions = np.linspace(y_range[0], y_range[1], y_steps)
         all_x_positions, all_y_positions = np.meshgrid(x_positions, y_positions)
         for y, x in zip(all_y_positions.flatten(), all_x_positions.flatten()):
-            self.move_stage_to(absolute_y_position=y, absolute_x_position=x)
+            self.move_stage_to(absolute_y_position_um=y, absolute_x_position_um=x)
             yield y, x
 
     def get_stage_position(self):
-        return self.stage.z_position, self.stage.y_position, self.stage.x_position
+        return self.stage.z_position_um, self.stage.y_position_um, self.stage.x_position_um
 
     def get_sample_pixel_size_um(self):
         return self.camera.pixel_size / self.objective.magnification
@@ -150,14 +128,14 @@ class Microscope(ABC):
                 If stop and step are not given, start is interpreted as the stop argument and start will be the minimum stage z range.
                 If the tuple is empty, the entire Stage.z_range is used.
         '''
-        z_position_before = self.stage.z_position
+        z_position_before = self.stage.z_position_um
         z_range = self._set_range(z_range, default_range=self.stage.z_range + (1,))
         z_positions = np.arange(z_range[0], z_range[1], z_range[2])
         images = []
         for z in z_positions:
-            self.move_stage_to(absolute_z_position=z)
+            self.move_stage_to(absolute_z_position_um=z)
             images.append(self.acquire_image())
-        self.move_stage_to(absolute_z_position=z_position_before)
+        self.move_stage_to(absolute_z_position_um=z_position_before)
         return np.asarray(images)
 
     def acquire_tiled_image(self, y_range: tuple, x_range: tuple) -> np.ndarray:
@@ -219,8 +197,8 @@ class Microscope(ABC):
         return range
 
     def _acquire_tiled(self, z_range: tuple = (), y_range: tuple = (), x_range: tuple = ()) -> np.ndarray:
-        x_position_before = self.stage.x_position
-        y_position_before = self.stage.y_position
+        x_position_before = self.stage.x_position_um
+        y_position_before = self.stage.y_position_um
         if z_range is None:
             image_function = self.acquire_image
         else:
@@ -228,7 +206,7 @@ class Microscope(ABC):
         images = []
         for y, x in self.scan_stage_positions(y_range, x_range):
             images.append(image_function())
-        self.move_stage_to(absolute_y_position=y_position_before, absolute_x_position=x_position_before)
+        self.move_stage_to(absolute_y_position_um=y_position_before, absolute_x_position_um=x_position_before)
         return np.asarray(images)
 
 
