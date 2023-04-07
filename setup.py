@@ -8,7 +8,7 @@ setuptools.setup(
     license="BSD-3-Clause",
     packages=setuptools.find_packages(exclude=["docs"]),
     include_package_data=True,
-    install_requires=["numpy"],
+    install_requires=["numpy", "pyclesperanto_prototype>=0.24.0", "apoc", "paho-mqtt"],
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
