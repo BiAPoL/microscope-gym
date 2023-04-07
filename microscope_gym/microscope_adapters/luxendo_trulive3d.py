@@ -34,8 +34,8 @@ class MqttHandler:
 
         def on_message(client, userdata, message):
             print("Received message: " + message.topic + " " + str(message.payload))
-            self.result = message.payload[0]
-            self.reply_json = json.loads(message.payload[1:])
+            self.result = message.payload
+            self.reply_json = json.loads(message.payload)
             self.waiting_for_reply = False
 
         self.mqttc.on_message = on_message
@@ -53,6 +53,7 @@ class MqttHandler:
             self.close()
 
     def on_disconnect(self, client, userdata, result_code):
+        self.connected = False
         if result_code == 0:
             # disconnect was successful
             print("Disonnected")
