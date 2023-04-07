@@ -27,7 +27,7 @@ class MqttHandler:
         self._publish_time: float
 
         self.mqttc = mqtt.Client()
-        self.subscribedTopics = []
+        self.subscribed_topics = []
 
         self.mqttc.on_connect = self.on_connect
         self.mqttc.on_disconnect = self.on_disconnect
@@ -43,7 +43,7 @@ class MqttHandler:
     def on_connect(self, client, userdata, flags, result_code):
         if result_code == 0:
             print("Connected")
-            for topic in self.subscribedTopics:
+            for topic in self.subscribed_topics:
                 self.mqttc.subscribe(topic)
 
             self.connected = True
@@ -70,7 +70,7 @@ class MqttHandler:
 
     def subscribe(self, topic):
         topic = self.main_topic + '/' + topic
-        self.subscribedTopics.append(topic)
+        self.subscribed_topics.append(topic)
         if self.connected:
             self.mqttc.subscribe(topic)
 
