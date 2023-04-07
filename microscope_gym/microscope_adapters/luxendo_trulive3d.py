@@ -13,7 +13,7 @@ class MqttException(Exception):
 
 
 class MqttHandler:
-    def __init__(self, broker_address: str = "localhost", broker_port: int = 61614,
+    def __init__(self, broker_address: str = "localhost", broker_port: int = 1883,
                  serial_number: str = "", reply_timeout_ms=10000):
         self.broker_address = broker_address
         self.broker_port = broker_port
