@@ -9,7 +9,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=["docs"]),
     include_package_data=True,
     install_requires=["numpy", "pyclesperanto_prototype>=0.24.0", "apoc", "paho-mqtt"],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD License",
