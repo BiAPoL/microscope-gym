@@ -24,6 +24,7 @@ class MqttHandler:
         self.waiting_for_reply = False
         self.result: bool
         self.reply_json: dict
+        self._publish_time: float
 
         self.mqttc = mqtt.Client()
         self.subscribedTopics = []
@@ -74,6 +75,7 @@ class MqttHandler:
             self.mqttc.subscribe(topic)
 
     def publish(self, topic, payload):
+        self._publish_time = time.time()
         self.mqttc.publish(topic, payload)
 
     def send_command(self, command):
@@ -81,6 +83,13 @@ class MqttHandler:
 
     def send_command_and_wait_for_reply(self, command, poll_interval_ms=10):
         self.send_command(command)
+        return self.wait_for_reply(poll_interval_ms)
+
+    def keep_waiting_for_replies(self, wait_timeout_ms=10000):
+        while time.time() - self._publish_time < wait_timeout_ms / 1000.0:
+            yield self.wait_for_reply(poll_interval_ms=0.1)
+
+    def wait_for_reply(self, poll_interval_ms=10):
         timeout_ms = self.reply_timeout_ms
         self.waiting_for_reply = True
         while self.waiting_for_reply and timeout_ms > 0:
@@ -88,8 +97,10 @@ class MqttHandler:
             timeout_ms -= poll_interval_ms
         if self.result:
             return self.reply_json
-        else:
-            raise MqttException(f"Command {command} failed. Error message: {self.reply_json['message']}")
+        raise MqttException(f"Command failed. Error message: {self.reply_json['message']}")
+
+    def __del__(self):
+        self.close()
 
 
 class Stage(interface.Stage):
@@ -134,7 +145,7 @@ class Stage(interface.Stage):
     @z_position.setter
     def z_position(self, value):
         super(Stage, type(self)).z_position.fset(self, value)
-        self._last_move_time = time.time()
+        self._send_new_position_to_hardware('x', value)
 
     @property
     def y_position(self):
@@ -143,17 +154,44 @@ class Stage(interface.Stage):
     @y_position.setter
     def y_position(self, value):
         super(Stage, type(self)).y_position.fset(self, value)
-        self._last
+        self._send_new_position_to_hardware('y', value)
 
-    def _get_current_position_from_hardware(self, client, userdata, msg):
-        axes = self._get_stage_status()
+    @property
+    def x_position(self):
+        return super().x_position
+
+    @x_position.setter
+    def x_position(self, value):
+        super(Stage, type(self)).x_position.fset(self, value)
+        self._send_new_position_to_hardware('x', value)
+
+    def wait_until_new_position_reached(self, wait_timeout_ms=10000):
+        for message in self.mqtt_handler.keep_waiting_for_replies(wait_timeout_ms):
+            if not self._update_axes(message['data']['axes']):
+                return True
+        raise MqttException("Timeout while waiting for new position")
+
+    def _decode_axes_positions(self, axes):
+        z_position = None
+        y_position = None
+        x_position = None
         for axis in axes:
             if axis['name'] == 'z':
-                self._z_position = float(axis['position'])
+                z_position = float(axis['position'])
             elif axis['name'] == 'y':
-                self._y_position = float(axis['position'])
+                y_position = float(axis['position'])
             elif axis['name'] == 'x':
-                self._x_position = float(axis['position'])
+                x_position = float(axis['position'])
+        return z_position, y_position, x_position
+
+    def _get_current_position_from_hardware(self, poll_interval_ms=10):
+        if time.time() - self._last_position_update > poll_interval_ms / 1000.0:
+            axes = self._get_stage_status()
+            self._update_axes(axes)
+            self._last_position_update = time.time()
+
+    def _send_new_position_to_hardware(self, axis, position):
+        self.mqtt_handler.send_command(f"move {axis} {position}")
 
     def _get_stage_range_from_hardware(self):
         axes = self._get_stage_status()
