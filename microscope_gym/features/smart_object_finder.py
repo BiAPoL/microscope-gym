@@ -3,7 +3,9 @@
 import numpy as np
 import pyclesperanto_prototype as cle
 import apoc
-import microscope_gym.interface
+
+# I am using the following interface features:
+from microscope_gym.interface import Objective, Stage, Camera, Microscope
 
 
 class SmartObjectFinder:
@@ -14,7 +16,7 @@ class SmartObjectFinder:
         scan_for_objects(x_range, y_range) -> list
     '''
 
-    def __init__(self, microscope: "microscope_gym.interface.Microscope",
+    def __init__(self, microscope: Microscope,
                  trained_apoc_segmenter: apoc.ObjectSegmenter, features: str):
         self.microscope = microscope
         self.segmenter = trained_apoc_segmenter
