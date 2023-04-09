@@ -112,12 +112,14 @@ class Axis(interface.stage.Axis):
     '''Stage axis data class.
 
     properties:
-        position(): float
-            position in µm
+        name: str
+            name of the axis, e.g. 'x', 'y' or 'z'
         min: float
             minimum position in µm
         max: float
             maximum position in µm
+        position_um: float
+            position in µm
         target: float
             target position in µm if target and position are different, the stage is moving
         guiName: str
@@ -126,11 +128,17 @@ class Axis(interface.stage.Axis):
             name of the device the axis belongs to
         type: str
             type of the axis (linear, rotary, ...)
+        is_moving: bool
+            True if the axis is moving, False otherwise.
     '''
     target: float
     guiName: Optional[str]
     partOf: Optional[str]
     type: str = 'linear'
+
+    @property
+    def is_moving(self):
+        return self.target != self.position_um
 
     @validator('target')
     @classmethod
