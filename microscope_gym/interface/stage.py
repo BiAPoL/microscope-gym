@@ -10,7 +10,11 @@ class Axis(BaseModel):
     min: float
     max: float
     position_um: float
-    is_moving: bool = Field(default=False)
+
+    @property
+    @abstractmethod
+    def is_moving(self) -> bool:
+        pass
 
     @validator('position_um')
     @classmethod

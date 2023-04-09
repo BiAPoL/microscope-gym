@@ -6,7 +6,7 @@ from microscope_gym.interface.stage import Axis
 from microscope_gym.interface import Objective
 
 
-class Axis(interface.Axis):
+class Axis(interface.stage.Axis):
     _last_move_time: float = -1
     _move_timeout: float = 0.001
 
