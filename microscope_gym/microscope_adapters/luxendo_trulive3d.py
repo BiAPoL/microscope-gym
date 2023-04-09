@@ -27,6 +27,7 @@ class VendorAPIHandler:
 
         self.connected = False
         self.waiting_for_reply = False
+        self.last_published: str
         self.latest_message: bool
         self.reply_json: dict
         self._publish_time: float
@@ -76,8 +77,9 @@ class VendorAPIHandler:
         if self.connected:
             self.mqttc.subscribe(topic)
 
-    def publish(self, topic, payload):
+    def publish(self, topic: str, payload: str):
         self._publish_time = time.time()
+        self.last_published = f"topic: {topic}, payload: {payload}"
         self.mqttc.publish(topic, payload)
 
     def send_command(self, command):
@@ -99,7 +101,8 @@ class VendorAPIHandler:
             waited += poll_interval_ms
             if not self.waiting_for_reply:
                 return self.reply_json
-        raise APIException(f"Reply timeout. No reply received within {self.reply_timeout_ms / 1000.0} s.")
+        raise APIException(
+            f"Timeout ({self.reply_timeout_ms / 1000.0} s) while waiting for reply to command: {self.last_published}")
 
     def __del__(self):
         self.close()
