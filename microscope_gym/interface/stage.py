@@ -116,7 +116,7 @@ class Stage():
 
     def get_zyx_position_in_axes_order(self, z_position_um: float = None,
                                        y_position_um: float = None, x_position_um: float = None):
-        '''Return z, y, x position in the order that the axes are stored.'''
+        '''Return z, y, x position in the order that the axes are stored in the "axes" list.'''
         if z_position_um is None:
             z_position_um = self.z_position_um
         if y_position_um is None:
