@@ -1,8 +1,18 @@
+from typing import List
 import numpy as np
 import time
 from microscope_gym import interface
 from microscope_gym.interface.stage import Axis
 from microscope_gym.interface import Objective
+
+
+class Axis(interface.Axis):
+    _last_move_time: float = -1
+    _move_timeout: float = 0.001
+
+    @property
+    def is_moving(self):
+        return time.time() - self.last_move_time < self._move_timeout
 
 
 class Stage(interface.Stage):
@@ -31,47 +41,11 @@ class Stage(interface.Stage):
             x range in µm
     '''
 
-    def __init__(self, axes: list):
-        super().__init__(axes)
-
-        # Set move timeout to 0.001 second.
-        self._move_timeout = 0.001
-        # set the polling interval to 0.001 second.
-        self._polling_interval = 0.001
-
-        # set last move time to -1 to indicate that the stage is not moving
-        self._last_move_time = -1
-
-    @property
-    def z_position_um(self):
-        return super().z_position_um
-
-    @z_position_um.setter
-    def z_position_um(self, value):
-        super(Stage, type(self)).z_position_um.fset(self, value)
-        self._last_move_time = time.time()
-
-    @property
-    def y_position_um(self):
-        return super().y_position_um
-
-    @y_position_um.setter
-    def y_position_um(self, value):
-        super(Stage, type(self)).y_position_um.fset(self, value)
-        self._last_move_time = time.time()
-
-    @property
-    def x_position_um(self):
-        return super().x_position_um
-
-    @x_position_um.setter
-    def x_position_um(self, value):
-        super(Stage, type(self)).x_position_um.fset(self, value)
-        self._last_move_time = time.time()
-
-    @property
-    def is_moving(self):
-        return time.time() - self._last_move_time < self._move_timeout
+    def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
+        super()._update_axes_positions(axis_names, positions)
+        now = time.time()
+        for axis_name in axis_names:
+            self.axes[axis_name]._last_move_time = now
 
 
 class Camera(interface.Camera):
