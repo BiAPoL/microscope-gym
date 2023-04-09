@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Tuple, Optional
 from pydantic import BaseModel, Field, validator
 import time
 
@@ -67,12 +67,12 @@ class Stage():
 
     @property
     def position_um(self):
-        return [axis.position_um for axis in self.axes]
+        return tuple([axis.position_um for axis in self.axes])
 
     @position_um.setter
-    def position_um(self, positions: List[float]):
-        for axis, position in zip(self.axes, positions):
-            axis.position_um = position
+    def position_um(self, positions: Tuple[float]):
+        axis_names = [axis.name for axis in self.axes]
+        self._update_axis_positions(axis_names, positions)
 
     @property
     def z_position_um(self):
@@ -80,7 +80,7 @@ class Stage():
 
     @z_position_um.setter
     def z_position_um(self, position: float):
-        self.axes_dict['z'].position_um = position
+        self._update_axis_positions(['z'], [position])
 
     @property
     def y_position_um(self):
@@ -88,7 +88,7 @@ class Stage():
 
     @y_position_um.setter
     def y_position_um(self, position: float):
-        self.axes_dict['y'].position_um = position
+        self._update_axis_positions(['y'], [position])
 
     @property
     def x_position_um(self):
@@ -96,7 +96,7 @@ class Stage():
 
     @x_position_um.setter
     def x_position_um(self, position: float):
-        self.axes_dict['x'].position_um = position
+        self._update_axis_positions(['x'], [position])
 
     @property
     def z_range(self):
@@ -160,3 +160,7 @@ class Stage():
             if time.time() - start_time > timeout_ms / 1000:
                 return False
         return True
+
+    def _update_axis_positions(self, axis_names: List[str], positions: List[float]):
+        for name, position in zip(axis_names, positions):
+            self.axes_dict[name].position_um = position
