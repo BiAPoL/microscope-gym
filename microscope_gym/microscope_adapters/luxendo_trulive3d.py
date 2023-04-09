@@ -1,9 +1,13 @@
-import numpy as np
+from typing import Optional, List
+from pydantic import validator
+from copy import deepcopy
 import time
-import h5py
 import json
+import numpy as np
+import h5py
 from microscope_gym import interface
 from microscope_gym.interface import Objective
+
 
 import paho.mqtt.client as mqtt
 
@@ -104,6 +108,39 @@ class MqttHandler:
         self.close()
 
 
+class Axis(interface.stage.Axis):
+    '''Stage axis data class.
+
+    properties:
+        position(): float
+            position in µm
+        min: float
+            minimum position in µm
+        max: float
+            maximum position in µm
+        target: float
+            target position in µm if target and position are different, the stage is moving
+        guiName: str
+            name of the axis as shown in the GUI
+        partOf: str
+            name of the device the axis belongs to
+        type: str
+            type of the axis (linear, rotary, ...)
+    '''
+    target: float
+    guiName: Optional[str]
+    partOf: Optional[str]
+    type: str = 'linear'
+
+    @validator('target')
+    @classmethod
+    def target_in_range(cls, target, values, **_):
+        if target < values['min'] or target > values['max']:
+            raise ValueError(
+                f"{values['name']}-axis target position {target} is not in range {values['min']} - {values['max']}")
+        return target
+
+
 class Stage(interface.Stage):
     '''Stage class.
 
@@ -135,8 +172,10 @@ class Stage(interface.Stage):
         self.y_range = None
         self.x_range = None
         self.mqtt_handler = mqtt_handler
+        self.mqtt_handler.connect()
         self.mqtt_handler.subscribe("embedded/stages")
-        self._get_stage_range_from_hardware()
+        self.default_command = {"type": "device", "data": {"device": "stages", "command": "get"}}
+        self._get_stage_axes_from_hardware()
         self._get_current_position_from_hardware()
 
     @property
@@ -146,7 +185,7 @@ class Stage(interface.Stage):
     @z_position.setter
     def z_position(self, value):
         super(Stage, type(self)).z_position.fset(self, value)
-        self._send_new_position_to_hardware('x', value)
+        self._send_new_positions_to_hardware(['x'], [value])
 
     @property
     def y_position(self):
@@ -155,7 +194,7 @@ class Stage(interface.Stage):
     @y_position.setter
     def y_position(self, value):
         super(Stage, type(self)).y_position.fset(self, value)
-        self._send_new_position_to_hardware('y', value)
+        self._send_new_positions_to_hardware(['y'], [value])
 
     @property
     def x_position(self):
@@ -164,7 +203,7 @@ class Stage(interface.Stage):
     @x_position.setter
     def x_position(self, value):
         super(Stage, type(self)).x_position.fset(self, value)
-        self._send_new_position_to_hardware('x', value)
+        self._send_new_positions_to_hardware(['x'], [value])
 
     def wait_until_new_position_reached(self, wait_timeout_ms=10000):
         for message in self.mqtt_handler.keep_waiting_for_replies(wait_timeout_ms):
@@ -191,31 +230,33 @@ class Stage(interface.Stage):
             self._update_axes(axes)
             self._last_position_update = time.time()
 
-    def _send_new_position_to_hardware(self, axis, position):
+    def _send_new_positions_to_hardware(self, axes: List[str], positions: List[float]):
+        command = deepcopy(self.default_command)
+        command['data']['command'] = 'set'
+        command['data']['axes'] = []
+        for axis, position in zip(axes, positions):
+            command['data']['axes'].append({"name": axis, "target": position})
         self.mqtt_handler.send_command(f"move {axis} {position}")
 
-    def _get_stage_range_from_hardware(self):
-        axes = self._get_stage_status()
-        for axis in axes:
-            if axis['name'] == 'z':
-                self.z_range = (float(axis['min']), float(axis['max']))
-            elif axis['name'] == 'y':
-                self.y_range = (float(axis['min']), float(axis['max']))
-            elif axis['name'] == 'x':
-                self.x_range = (float(axis['min']), float(axis['max']))
-        assert isinstance(
-            self.z_range, tuple) and isinstance(
-            self.z_range[0], float) and isinstance(
-            self.z_range[1], float), "Could not set stage Z range"
-        assert isinstance(
-            self.y_range, tuple) and isinstance(
-            self.y_range[0], float) and isinstance(
-            self.y_range[1], float), "Could not set stage Y range"
-        assert isinstance(
-            self.x_range, tuple) and isinstance(
-            self.x_range[0], float) and isinstance(
-            self.x_range[1], float), "Could not set stage X range"
+    def _get_stage_axes_from_hardware(self):
+        axes_data = self._get_stage_status()
+        self.axes = []
+        for axis_data in axes_data:
+            axis = self._axis_from_dict(axis_data)
+            self.axes.append(axis)
+            self.axes_dict[axis.name] = axis
 
     def _get_stage_status(self):
-        message = self.mqtt_handler.send_command_and_wait_for_reply({"command": "get"})
+        message = self.mqtt_handler.send_command_and_wait_for_reply(str(self.default_command))
         return message['data']['axes']
+
+    @staticmethod
+    def _axis_from_dict(axis_dict: dict) -> Axis:
+        axis_dict['position'] = float(axis_dict.pop('value'))
+        return Axis(**axis_dict)
+
+    @staticmethod
+    def _axis_to_dict(axis: Axis) -> dict:
+        axis_dict = axis.dict()
+        axis_dict['value'] = axis_dict.pop('position')
+        return axis_dict
