@@ -162,5 +162,15 @@ class Stage():
         return True
 
     def _update_axis_positions(self, axis_names: List[str], positions: List[float]):
+        '''Write new positions to axes.
+
+        Position validation is done in Axis model.
+
+        Parameters:
+            axis_names: list[str]
+                list of axis names
+            positions: list[float]
+                list of new positions (in um)
+        '''
         for name, position in zip(axis_names, positions):
             self.axes_dict[name].position_um = position
