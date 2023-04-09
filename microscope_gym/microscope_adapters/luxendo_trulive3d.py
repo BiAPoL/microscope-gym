@@ -92,13 +92,13 @@ class VendorAPIHandler:
             yield self.wait_for_reply(poll_interval_ms=0.1)
 
     def wait_for_reply(self, poll_interval_ms=10):
-        timeout_ms = self.reply_timeout_ms
         self.waiting_for_reply = True
-        while self.waiting_for_reply and timeout_ms > 0:
+        waited = 0
+        while self.waiting_for_reply and waited < self.reply_timeout_ms:
             time.sleep(poll_interval_ms / 1000.0)
-            timeout_ms -= poll_interval_ms
-        if self.latest_message:
-            return self.reply_json
+            waited += poll_interval_ms
+            if not self.waiting_for_reply:
+                return self.reply_json
         raise MqttException(f"Command failed. Error message: {self.reply_json['message']}")
 
     def __del__(self):
@@ -183,11 +183,12 @@ class Stage(interface.Stage):
         self.mqtt_handler.connect()
         self.mqtt_handler.subscribe("embedded/stages")
         self.default_command = {"type": "device", "data": {"device": "stages", "command": "get"}}
-        self._update_axes(self._get_stage_status())
+        self._update_axes_from_device_message(self._get_stage_status())
 
     def wait_until_stopped(self, wait_timeout_ms=10000):
         for message in self.mqtt_handler.keep_waiting_for_replies(wait_timeout_ms):
-            if not self._update_axes(message['data']['axes']):
+            self._update_axes_from_device_message(message['data']['axes'])
+            if not self.is_moving():
                 return True
         return False
 
@@ -199,9 +200,9 @@ class Stage(interface.Stage):
             command['data']['axes'].append({"name": name, "target": position})
         self.mqtt_handler.send_command(str(command))
 
-    def _update_axes(self, axes_data):
+    def _update_axes_from_device_message(self, axes_data_from_device):
         self.axes = OrderedDict()
-        for axis_data in axes_data:
+        for axis_data in axes_data_from_device:
             axis = self._axis_from_dict(axis_data)
             self.axes[axis.name] = axis
 
