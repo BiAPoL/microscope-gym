@@ -73,7 +73,7 @@ class Stage():
     @position_um.setter
     def position_um(self, positions: Tuple[float]):
         axis_names = [axis.name for axis in self.axes.values()]
-        self._update_axis_positions(axis_names, positions)
+        self._update_axes_positions(axis_names, positions)
 
     @property
     def z_position_um(self):
@@ -81,7 +81,7 @@ class Stage():
 
     @z_position_um.setter
     def z_position_um(self, position: float):
-        self._update_axis_positions(['z'], [position])
+        self._update_axes_positions(['z'], [position])
 
     @property
     def y_position_um(self):
@@ -89,7 +89,7 @@ class Stage():
 
     @y_position_um.setter
     def y_position_um(self, position: float):
-        self._update_axis_positions(['y'], [position])
+        self._update_axes_positions(['y'], [position])
 
     @property
     def x_position_um(self):
@@ -97,7 +97,7 @@ class Stage():
 
     @x_position_um.setter
     def x_position_um(self, position: float):
-        self._update_axis_positions(['x'], [position])
+        self._update_axes_positions(['x'], [position])
 
     @property
     def z_range(self):
@@ -174,7 +174,7 @@ class Stage():
                 return False
         return True
 
-    def _update_axis_positions(self, axis_names: List[str], positions: List[float]):
+    def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
         '''Write new positions to axes.
 
         Position validation is done in Axis model.

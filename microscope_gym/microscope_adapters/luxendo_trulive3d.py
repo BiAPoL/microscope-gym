@@ -192,7 +192,7 @@ class Stage(interface.Stage):
                 return True
         return False
 
-    def _update_axis_positions(self, axis_names: List[str], positions: List[float]):
+    def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
         command = deepcopy(self.default_command)
         command['data']['command'] = 'set'
         command['data']['axes'] = []
