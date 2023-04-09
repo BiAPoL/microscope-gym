@@ -206,14 +206,13 @@ class Stage(interface.Stage):
             command['data']['axes'].append({"name": name, "value": position})
         self.mqtt_handler.send_command(json.dumps(command))
 
-    def _message_callback(self, message):
-        self._update_axes_from_device_message(message['data']['axes'])
-
-    def _update_axes_from_device_message(self, axes_data_from_device):
-        self.axes = OrderedDict()
-        for axis_data in axes_data_from_device:
+    def _message_callback(self, payload_dict: dict):
+        axes = OrderedDict()
+        for axis_data in payload_dict['data']['axes']:
             axis = Axis(**axis_data)
-            self.axes[axis.name] = axis
+            axes[axis.name] = axis
+        if len(axes) > 0:
+            self.axes = axes
 
     def _get_stage_status(self):
         message = self.mqtt_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
