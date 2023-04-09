@@ -191,13 +191,6 @@ class Stage(interface.Stage):
                 return True
         return False
 
-    def _update_axes(self, axes_data):
-        self.axes = []
-        for axis_data in axes_data:
-            axis = self._axis_from_dict(axis_data)
-            self.axes.append(axis)
-            self.axes_dict[axis.name] = axis
-
     def _update_axis_position(self, axis_names: List[str], positions: List[float]):
         command = deepcopy(self.default_command)
         command['data']['command'] = 'set'
@@ -205,6 +198,13 @@ class Stage(interface.Stage):
         for name, position in zip(axis_names, positions):
             command['data']['axes'].append({"name": name, "target": position})
         self.mqtt_handler.send_command(str(command))
+
+    def _update_axes(self, axes_data):
+        self.axes = []
+        for axis_data in axes_data:
+            axis = self._axis_from_dict(axis_data)
+            self.axes.append(axis)
+            self.axes_dict[axis.name] = axis
 
     def _get_stage_status(self):
         message = self.mqtt_handler.send_command_and_wait_for_reply(str(self.default_command))
