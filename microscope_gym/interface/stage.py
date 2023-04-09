@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, OrderedDict
+from collections import OrderedDict
 from pydantic import BaseModel, Field, validator
 import time
 
@@ -41,8 +42,8 @@ class Stage():
             list of Axis objects
         axes_dict: dict
             dictionary where keys are the axes names
-        position_um: list[float]
-            list of positions in um
+        position_um: tuple[float]
+            tuple of positions in um
         z_position_um: float
             z-axis position in um
         y_position_um: float
@@ -58,25 +59,25 @@ class Stage():
         is_moving: bool
             True if stage is moving, False otherwise
     '''
-    axes_dict: Dict[str, Axis]
-    axes: List[Axis]
+    axes: OrderedDict[str, Axis]
 
     def __init__(self, axes: List[Axis]):
-        self.axes = axes
-        self.axes_dict = {axis.name: axis for axis in axes}
+        self.axes = OrderedDict()
+        for axis in axes:
+            self.axes[axis.name] = axis
 
     @property
     def position_um(self):
-        return tuple([axis.position_um for axis in self.axes])
+        return tuple([axis.position_um for axis in self.axes.values()])
 
     @position_um.setter
     def position_um(self, positions: Tuple[float]):
-        axis_names = [axis.name for axis in self.axes]
+        axis_names = [axis.name for axis in self.axes.values()]
         self._update_axis_positions(axis_names, positions)
 
     @property
     def z_position_um(self):
-        return self.axes_dict['z'].position_um
+        return self.axes['z'].position_um
 
     @z_position_um.setter
     def z_position_um(self, position: float):
@@ -84,7 +85,7 @@ class Stage():
 
     @property
     def y_position_um(self):
-        return self.axes_dict['y'].position_um
+        return self.axes['y'].position_um
 
     @y_position_um.setter
     def y_position_um(self, position: float):
@@ -92,7 +93,7 @@ class Stage():
 
     @property
     def x_position_um(self):
-        return self.axes_dict['x'].position_um
+        return self.axes['x'].position_um
 
     @x_position_um.setter
     def x_position_um(self, position: float):
@@ -100,23 +101,26 @@ class Stage():
 
     @property
     def z_range(self):
-        return self.axes_dict['z'].min, self.axes_dict['z'].max
+        return self.axes['z'].min, self.axes['z'].max
 
     @property
     def y_range(self):
-        return self.axes_dict['y'].min, self.axes_dict['y'].max
+        return self.axes['y'].min, self.axes['y'].max
 
     @property
     def x_range(self):
-        return self.axes_dict['x'].min, self.axes_dict['x'].max
+        return self.axes['x'].min, self.axes['x'].max
 
     @property
     def is_moving(self):
-        return any([axis.is_moving for axis in self.axes])
+        return any([axis.is_moving for axis in self.axes.values()])
 
     def get_zyx_position_in_axes_order(self, z_position_um: float = None,
                                        y_position_um: float = None, x_position_um: float = None):
-        '''Return z, y, x position in the order that the axes are stored in the "axes" list.'''
+        '''Return z, y, x position in the order that the axes are stored in the "axes" list.
+
+        Positions for axes that are not z, y, or x will be the current position of the respective axis.
+        '''
         if z_position_um is None:
             z_position_um = self.z_position_um
         if y_position_um is None:
@@ -124,7 +128,7 @@ class Stage():
         if x_position_um is None:
             x_position_um = self.x_position_um
         result = []
-        for axis in self.axes:
+        for axis in self.axes.values():
             if axis.name == 'z':
                 result.append(z_position_um)
             elif axis.name == 'y':
@@ -151,10 +155,19 @@ class Stage():
         '''
         ordered_position = self.get_zyx_position_in_axes_order(z_position_um, y_position_um, x_position_um)
         return [get_nearest_position_in_range(axis, position)
-                for axis, position in zip(self.axes, ordered_position)]
+                for axis, position in zip(self.axes.values(), ordered_position)]
 
-    def wait_until_stopped(self, timeout_ms: float = 10000):
-        '''Wait until stage is not moving anymore.'''
+    def wait_until_stopped(self, timeout_ms: float = 10000) -> bool:
+        '''Wait until stage is not moving anymore.
+
+        Parameters:
+            timeout_ms: float
+                timeout in ms
+
+        Returns:
+            bool
+                True if stage is stopped, False if timeout
+        '''
         start_time = time.time()
         while self.is_moving:
             if time.time() - start_time > timeout_ms / 1000:
@@ -173,4 +186,4 @@ class Stage():
                 list of new positions (in um)
         '''
         for name, position in zip(axis_names, positions):
-            self.axes_dict[name].position_um = position
+            self.axes[name].position_um = position
