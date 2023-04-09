@@ -13,7 +13,7 @@ from microscope_gym.interface import Objective, Microscope
 import paho.mqtt.client as mqtt
 
 
-class MqttException(Exception):
+class APIException(Exception):
     pass
 
 
@@ -60,7 +60,7 @@ class VendorAPIHandler:
         if result_code == 0:
             print("Disonnected")
         else:
-            raise MqttException(f"Connection to MQTT broker lost unexpectedly. Error code: {result_code}")
+            raise APIException(f"Connection to MQTT broker lost unexpectedly. Error code: {result_code}")
 
     def connect(self):
         self.mqttc.connect(self.broker_address, self.broker_port)
@@ -99,7 +99,7 @@ class VendorAPIHandler:
             waited += poll_interval_ms
             if not self.waiting_for_reply:
                 return self.reply_json
-        raise MqttException(f"Command failed. Error message: {self.reply_json['message']}")
+        raise APIException(f"Reply timeout. No reply received within {self.reply_timeout_ms / 1000.0} s.")
 
     def __del__(self):
         self.close()
