@@ -11,11 +11,6 @@ class Axis(BaseModel):
     max: float
     position_um: float
 
-    @property
-    @abstractmethod
-    def is_moving(self) -> bool:
-        pass
-
     @validator('position_um')
     @classmethod
     def position_in_range(cls, position, values, **kwargs):
@@ -40,6 +35,8 @@ class Stage():
             get nearest position in range
         wait_until_stopped(timeout_ms: float) -> bool
             wait until stage is stopped, return True if stopped, False if timeout
+        is_moving() -> bool
+            returns True if stage is moving, False otherwise
 
     properties:
         axes: list[Axes]
@@ -60,8 +57,6 @@ class Stage():
             y-axis range in um
         x_range: tuple[float, float]
             x-axis range in um
-        is_moving: bool
-            True if stage is moving, False otherwise
     '''
     axes: OrderedDict[str, Axis]
 
@@ -115,9 +110,10 @@ class Stage():
     def x_range(self):
         return self.axes['x'].min, self.axes['x'].max
 
-    @property
+    @abstractmethod
     def is_moving(self):
-        return any([axis.is_moving for axis in self.axes.values()])
+        '''Return True if stage is moving, False otherwise.'''
+        pass
 
     def get_zyx_position_in_axes_order(self, z_position_um: float = None,
                                        y_position_um: float = None, x_position_um: float = None):
@@ -173,7 +169,7 @@ class Stage():
                 True if stage is stopped, False if timeout
         '''
         start_time = time.time()
-        while self.is_moving:
+        while self.is_moving():
             if time.time() - start_time > timeout_ms / 1000:
                 return False
         return True

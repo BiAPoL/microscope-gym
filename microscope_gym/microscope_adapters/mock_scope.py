@@ -1,18 +1,14 @@
 from typing import List
+from pydantic import create_model
 import numpy as np
 import time
 from microscope_gym import interface
-from microscope_gym.interface.stage import Axis
 from microscope_gym.interface import Objective
 
 
 class Axis(interface.stage.Axis):
-    _last_move_time: float = -1
-    _move_timeout: float = 0.001
-
-    @property
-    def is_moving(self):
-        return time.time() - self.last_move_time < self._move_timeout
+    last_move_time = -1.0
+    move_timeout = 0.001
 
 
 class Stage(interface.Stage):
@@ -41,11 +37,15 @@ class Stage(interface.Stage):
             x range in µm
     '''
 
+    def is_moving(self):
+        now = time.time()
+        return any([(now - axis.last_move_time) < axis.move_timeout for axis in self.axes.values()])
+
     def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
         super()._update_axes_positions(axis_names, positions)
         now = time.time()
         for axis_name in axis_names:
-            self.axes[axis_name]._last_move_time = now
+            self.axes[axis_name].last_move_time = now
 
 
 class Camera(interface.Camera):
@@ -179,8 +179,9 @@ def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), c
     stage = Stage(axes)
     camera = Camera(camera_pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image, stage)
     objective = Objective(
-        objective_magnification,
-        objective_working_distance,
-        objective_numerical_aperture,
-        objective_immersion)
+        name=f"{objective_magnification}x {objective_immersion}",
+        magnification=objective_magnification,
+        working_distance=objective_working_distance,
+        numerical_aperture=objective_numerical_aperture,
+        immersion=objective_immersion)
     return Microscope(camera, stage, objective)

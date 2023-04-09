@@ -133,10 +133,6 @@ class Axis(interface.stage.Axis):
     partOf: Optional[str]
     type: str = 'linear'
 
-    @property
-    def is_moving(self):
-        return self.target != self.position_um
-
     @validator('target')
     @classmethod
     def target_in_range(cls, target, values, **kwargs):
@@ -175,6 +171,9 @@ class Stage(interface.Stage):
         x_range(): tuple
             x range in µm
     '''
+
+    def is_moving(self):
+        return any([axis.target != axis.position_um for axis in self.axes.values()])
 
     def __init__(self, mqtt_handler: VendorAPIHandler):
         self.z_range = None
