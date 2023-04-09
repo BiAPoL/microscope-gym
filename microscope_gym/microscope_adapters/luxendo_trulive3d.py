@@ -16,7 +16,7 @@ class MqttException(Exception):
     pass
 
 
-class MqttHandler:
+class VendorAPIHandler:
     def __init__(self, broker_address: str = "localhost", broker_port: int = 1883,
                  serial_number: str = "", reply_timeout_ms=10000):
         self.broker_address = broker_address
@@ -26,7 +26,7 @@ class MqttHandler:
 
         self.connected = False
         self.waiting_for_reply = False
-        self.result: bool
+        self.latest_message: bool
         self.reply_json: dict
         self._publish_time: float
 
@@ -35,14 +35,13 @@ class MqttHandler:
 
         self.mqttc.on_connect = self.on_connect
         self.mqttc.on_disconnect = self.on_disconnect
+        self.mqttc.on_message = self.on_message
 
-        def on_message(client, userdata, message):
-            print("Received message: " + message.topic + " " + str(message.payload))
-            self.result = message.payload
-            self.reply_json = json.loads(message.payload)
-            self.waiting_for_reply = False
-
-        self.mqttc.on_message = on_message
+    def on_message(self, client, userdata, message):
+        print("Received message: " + message.topic + " " + str(message.payload))
+        self.latest_message = message
+        self.reply_json = json.loads(message.payload)
+        self.waiting_for_reply = False
 
     def on_connect(self, client, userdata, flags, result_code):
         if result_code == 0:
@@ -52,17 +51,14 @@ class MqttHandler:
 
             self.connected = True
         else:
-            # couldn't connect
             self.connected = False
             self.close()
 
     def on_disconnect(self, client, userdata, result_code):
         self.connected = False
         if result_code == 0:
-            # disconnect was successful
             print("Disonnected")
         else:
-            # unexpected disconnect
             raise MqttException(f"Connection to MQTT broker lost unexpectedly. Error code: {result_code}")
 
     def connect(self):
@@ -100,7 +96,7 @@ class MqttHandler:
         while self.waiting_for_reply and timeout_ms > 0:
             time.sleep(poll_interval_ms / 1000.0)
             timeout_ms -= poll_interval_ms
-        if self.result:
+        if self.latest_message:
             return self.reply_json
         raise MqttException(f"Command failed. Error message: {self.reply_json['message']}")
 
@@ -179,7 +175,7 @@ class Stage(interface.Stage):
             x range in µm
     '''
 
-    def __init__(self, mqtt_handler: MqttHandler):
+    def __init__(self, mqtt_handler: VendorAPIHandler):
         self.z_range = None
         self.y_range = None
         self.x_range = None
