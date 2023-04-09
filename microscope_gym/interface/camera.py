@@ -1,6 +1,20 @@
 '''Camera interface for microscope_gym.'''
 from abc import ABC, abstractmethod
+from pydantic import BaseModel, Field
 import numpy
+
+
+class CameraSettings(BaseModel):
+    pixel_size_um: float = Field(0.0, ge=0.0)
+    width_pixels: int = Field(0, ge=0)
+    height_pixels: int = Field(0, ge=0)
+    exposure_time_ms: float = Field(100.0, ge=0.0)
+    gain: float = Field(0.0, ge=0.0)
+
+    class Config:
+        validate_assignment = True
+
+# TODO: refactor Camera class to use CameraSettings
 
 
 class Camera(ABC):
