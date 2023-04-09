@@ -13,7 +13,7 @@ class Axis(BaseModel):
 
     @validator('position_um')
     @classmethod
-    def position_in_range(cls, position, values, **_):
+    def position_in_range(cls, position, values, **kwargs):
         if position < values['min'] or position > values['max']:
             raise ValueError(
                 f"{values['name']}-axis position {position} is not in range {values['min']} - {values['max']}")
