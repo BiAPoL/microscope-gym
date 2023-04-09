@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from typing import Optional, List, Tuple
-from pydantic import validator
+from pydantic import Field, validator
 from copy import deepcopy
 import time
 import json
@@ -31,6 +31,7 @@ class VendorAPIHandler:
         self.latest_message: bool
         self.reply_json: dict
         self._publish_time: float
+        self.message_callbacks = []
 
         self.mqttc = mqtt.Client()
         self.subscribed_topics = []
@@ -44,6 +45,8 @@ class VendorAPIHandler:
         self.latest_message = message
         self.reply_json = json.loads(message.payload)
         self.waiting_for_reply = False
+        for callback in self.message_callbacks:
+            callback(self.reply_json)
 
     def on_connect(self, client, userdata, flags, result_code):
         if result_code == 0:
@@ -66,6 +69,18 @@ class VendorAPIHandler:
     def connect(self):
         self.mqttc.connect(self.broker_address, self.broker_port)
         self.mqttc.loop_start()
+
+    def wait_for_connection(self):
+        started = time.time()
+        while not self.connected and time.time() - started < self.reply_timeout_ms / 1000.0:
+            time.sleep(0.1)
+        if not self.connected:
+            raise APIException(f"Connection to MQTT broker timed out after {self.reply_timeout_ms / 1000.0} s")
+        
+    def ensure_connection(self):
+        if not self.connected:
+            self.connect()
+            self.wait_for_connection()
 
     def close(self):
         self.mqttc.loop_stop()
@@ -131,18 +146,14 @@ class Axis(interface.stage.Axis):
         is_moving: bool
             True if the axis is moving, False otherwise.
     '''
-    target: float
+    position_um: float = Field(..., alias='target')
+    value: float
     guiName: Optional[str]
     partOf: Optional[str]
     type: str = 'linear'
-
-    @validator('target')
-    @classmethod
-    def target_in_range(cls, target, values, **kwargs):
-        if target < values['min'] or target > values['max']:
-            raise ValueError(
-                f"{values['name']}-axis target position {target} is not in range {values['min']} - {values['max']}")
-        return target
+    
+    class Config:
+        validate_assignment = True
 
 
 class Stage(interface.Stage):
@@ -176,50 +187,34 @@ class Stage(interface.Stage):
     '''
 
     def is_moving(self):
-        return any([axis.target != axis.position_um for axis in self.axes.values()])
+        return any([axis.value != axis.position_um for axis in self.axes.values()])
 
     def __init__(self, mqtt_handler: VendorAPIHandler):
-        self.z_range = None
-        self.y_range = None
-        self.x_range = None
         self.mqtt_handler = mqtt_handler
-        self.mqtt_handler.connect()
+        self.mqtt_handler.ensure_connection()
         self.mqtt_handler.subscribe("embedded/stages")
         self.default_command = {"type": "device", "data": {"device": "stages", "command": "get"}}
-        self._update_axes_from_device_message(self._get_stage_status())
-
-    def wait_until_stopped(self, wait_timeout_ms=10000):
-        for message in self.mqtt_handler.keep_waiting_for_replies(wait_timeout_ms):
-            self._update_axes_from_device_message(message['data']['axes'])
-            if not self.is_moving():
-                return True
-        return False
+        self.mqtt_handler.message_callbacks.append(self._message_callback)
+        self._get_stage_status()
 
     def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
         command = deepcopy(self.default_command)
         command['data']['command'] = 'set'
         command['data']['axes'] = []
         for name, position in zip(axis_names, positions):
-            command['data']['axes'].append({"name": name, "target": position})
-        self.mqtt_handler.send_command(str(command))
+            self.axes[name].position_um = position
+            command['data']['axes'].append({"name": name, "value": position})
+        self.mqtt_handler.send_command(json.dumps(command))
+
+    def _message_callback(self, message):
+        self._update_axes_from_device_message(message['data']['axes'])
 
     def _update_axes_from_device_message(self, axes_data_from_device):
         self.axes = OrderedDict()
         for axis_data in axes_data_from_device:
-            axis = self._axis_from_dict(axis_data)
+            axis = Axis(**axis_data)
             self.axes[axis.name] = axis
 
     def _get_stage_status(self):
-        message = self.mqtt_handler.send_command_and_wait_for_reply(str(self.default_command))
+        message = self.mqtt_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
         return message['data']['axes']
-
-    @staticmethod
-    def _axis_from_dict(axis_dict: dict) -> Axis:
-        axis_dict['position'] = float(axis_dict.pop('value'))
-        return Axis(**axis_dict)
-
-    @staticmethod
-    def _axis_to_dict(axis: Axis) -> dict:
-        axis_dict = axis.dict()
-        axis_dict['value'] = axis_dict.pop('position')
-        return axis_dict
