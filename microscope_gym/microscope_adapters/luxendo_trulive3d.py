@@ -247,11 +247,12 @@ class Camera(interface.Camera):
             timeout -= poll_interval
         if timeout <= 0:
             raise APIException(f"Timeout ({self.new_image_timeout_ms / 1000.0} s) while waiting for new image")
+        # TODO: remoe new stack and experiment settings with current stage position
         self.has_new_image = False
         return self.current_image
 
     def _send_capture_command(self):
-        # TODO: update stack settings with current stage position
+        # TODO: add new stack and experiment settings with current stage position
         command = {"type": "operation", "data": {"device": "execution", "command": "run", "state": True}}
         self.api_handler.send_command(json.dumps(command))
 
