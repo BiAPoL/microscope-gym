@@ -76,7 +76,7 @@ class VendorAPIHandler:
             time.sleep(0.1)
         if not self.connected:
             raise APIException(f"Connection to MQTT broker timed out after {self.reply_timeout_ms / 1000.0} s")
-        
+
     def ensure_connection(self):
         if not self.connected:
             self.connect()
@@ -151,7 +151,7 @@ class Axis(interface.stage.Axis):
     guiName: Optional[str]
     partOf: Optional[str]
     type: str = 'linear'
-    
+
     class Config:
         validate_assignment = True
 
@@ -189,12 +189,12 @@ class Stage(interface.Stage):
     def is_moving(self):
         return any([axis.value != axis.position_um for axis in self.axes.values()])
 
-    def __init__(self, mqtt_handler: VendorAPIHandler):
-        self.mqtt_handler = mqtt_handler
-        self.mqtt_handler.ensure_connection()
-        self.mqtt_handler.subscribe("embedded/stages")
+    def __init__(self, api_handler: VendorAPIHandler):
+        self.api_handler = api_handler
+        self.api_handler.ensure_connection()
+        self.api_handler.subscribe("embedded/stages")
         self.default_command = {"type": "device", "data": {"device": "stages", "command": "get"}}
-        self.mqtt_handler.message_callbacks.append(self._message_callback)
+        self.api_handler.message_callbacks.append(self._message_callback)
         self._get_stage_status()
 
     def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
@@ -204,7 +204,7 @@ class Stage(interface.Stage):
         for name, position in zip(axis_names, positions):
             self.axes[name].position_um = position
             command['data']['axes'].append({"name": name, "value": position})
-        self.mqtt_handler.send_command(json.dumps(command))
+        self.api_handler.send_command(json.dumps(command))
 
     def _message_callback(self, payload_dict: dict):
         axes = OrderedDict()
@@ -215,5 +215,5 @@ class Stage(interface.Stage):
             self.axes = axes
 
     def _get_stage_status(self):
-        message = self.mqtt_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
+        message = self.api_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
         return message['data']['axes']
