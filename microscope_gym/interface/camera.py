@@ -1,20 +1,17 @@
 '''Camera interface for microscope_gym.'''
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-import numpy
 
 
 class CameraSettings(BaseModel):
-    pixel_size_um: float = Field(0.0, ge=0.0)
-    width_pixels: int = Field(0, ge=0)
-    height_pixels: int = Field(0, ge=0)
+    pixel_size_um: float = Field(..., ge=0.0, description="physical pixel size of camera chip in µm")
+    width_pixels: int = Field(..., ge=0, description="width of camera chip in pixels")
+    height_pixels: int = Field(..., ge=0, description="height of camera chip in pixels")
     exposure_time_ms: float = Field(100.0, ge=0.0)
-    gain: float = Field(0.0, ge=0.0)
+    gain: float = Field(0.0, ge=0.0, description="amplifier gain")
 
     class Config:
         validate_assignment = True
-
-# TODO: refactor Camera class to use CameraSettings
 
 
 class Camera(ABC):
@@ -25,32 +22,47 @@ class Camera(ABC):
         configure_camera(settings)
 
     properties:
-        pixel_size(): float
+        pixel_size_um: float
             pixel size in µm
-        width(): int
+        width_pixels: int
             camera width in pixels
-        height(): int
+        height_pixels: int
             camera height in pixels
-        settings(): dict
-            vendor-specific camera settings for example: {"exposure_time_ms": 100, "gain": 0}
-        image_shape(): tuple
+        image_shape: tuple
             camera image shape (height, width) TODO: implement as getter
+        settings: CameraSettings
+            vendor-specific camera settings for example: {"exposure_time_ms": 100, "gain": 0}
     '''
+    @property
+    def pixel_size_um(self):
+        return self.settings.pixel_size_um
 
     @property
-    def camera_settings(self):
-        return self._camera_settings
+    def width_pixels(self):
+        return self.settings.width_pixels
 
-    @camera_settings.setter
-    def camera_settings(self, value):
+    @property
+    def height_pixels(self):
+        return self.settings.height_pixels
+
+    @property
+    def image_shape(self):
+        return (self.height_pixels, self.width_pixels)
+
+    @property
+    def settings(self):
+        return self._settings
+
+    @settings.setter
+    def settings(self, value):
         self.configure_camera(value)
 
     @abstractmethod
-    def capture_image(self) -> "numpy.ndarray":
+    def capture_image(self) -> "numpy.ndarray":  # type: ignore
         '''Acquire new image.'''
         pass
 
     @abstractmethod
-    def configure_camera(self, settings: "dict"):
+    def configure_camera(self, settings: CameraSettings) -> None:
         '''Configure camera settings.'''
         pass

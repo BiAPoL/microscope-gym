@@ -101,7 +101,7 @@ def test_microscope_factory():
     assert isinstance(microscope.stage, interface.Stage)
 
     # assert that Camera object is correctly initialized
-    assert microscope.camera.pixel_size == pixel_size
+    assert microscope.camera.pixel_size_um == pixel_size
     assert microscope.camera.height_pixels == camera_height_pixels
     assert microscope.camera.width_pixels == camera_width_pixels
     assert microscope.camera.settings == settings

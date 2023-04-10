@@ -97,7 +97,7 @@ class Microscope(ABC):
         return self.stage.z_position_um, self.stage.y_position_um, self.stage.x_position_um
 
     def get_sample_pixel_size_um(self):
-        return self.camera.pixel_size / self.objective.magnification
+        return self.camera.pixel_size_um / self.objective.magnification
 
     def get_field_of_view_um(self):
         sample_pixel_size = self.get_sample_pixel_size_um()

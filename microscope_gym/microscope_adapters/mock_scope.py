@@ -3,7 +3,7 @@ from pydantic import create_model
 import numpy as np
 import time
 from microscope_gym import interface
-from microscope_gym.interface import Objective
+from microscope_gym.interface import Objective, CameraSettings
 
 
 class Axis(interface.stage.Axis):
@@ -58,26 +58,22 @@ class Camera(interface.Camera):
             Configure camera settings.
 
     properties:
-        pixel_size(): float
+        pixel_size_um: float
             Pixel size in µm.
-        height_pixels(): int
-            Height ov camera chip in pixels.
-        width_pixels(): int
+        height_pixels: int
+            Height of camera chip in pixels.
+        width_pixels: int
             Width of camera chip in pixels.
-        settings(): dict
+        settings: interface.CameraSettings
             Camera settings.
         overview_image(): numpy.ndarray
             Overview image of the sample. In order to conform with the image dimensions commonly used in microscopy, the overview image should be a 3D array with dimensions (z, y, x).
     '''
 
-    def __init__(self, pixel_size, height_pixels, width_pixels, settings, overview_image, stage: Stage):
-        self.pixel_size = pixel_size
-        self.height_pixels = height_pixels
-        self.width_pixels = width_pixels
-        self.settings = settings
+    def __init__(self, settings: interface.CameraSettings, overview_image, stage: Stage):
+        self._settings = settings
         self.overview_image = overview_image
         self.stage = stage
-        self.image_shape = (self.height_pixels, self.width_pixels)
 
     def capture_image(self) -> np.ndarray:
         '''Capture image the current stage position.'''
@@ -86,8 +82,8 @@ class Camera(interface.Camera):
         x_offset = self.width_pixels / 2
         return self.overview_image[int(z), int(y - y_offset):int(y + y_offset), int(x - x_offset):int(x + x_offset)]
 
-    def configure_camera(self, settings: dict) -> None:
-        self.settings = settings
+    def configure_camera(self, settings: interface.CameraSettings) -> None:
+        self._settings = settings
 
 
 class Microscope(interface.Microscope):
@@ -113,7 +109,7 @@ class Microscope(interface.Microscope):
         height_um = self.camera.height_pixels * sample_pixel_size
         return {
             'camera': {
-                'pixel_size': self.camera.pixel_size,
+                'pixel_size': self.camera.pixel_size_um,
                 'width': self.camera.width_pixels,
                 'height': self.camera.height_pixels,
                 'settings': self.camera.settings,
@@ -177,7 +173,11 @@ def microscope_factory(overview_image=np.random.normal(size=(10, 1024, 1024)), c
             Axis(name='y', position_um=y_position_um, min=y_range[0], max=y_range[1]),
             Axis(name='x', position_um=x_position_um, min=x_range[0], max=x_range[1])]
     stage = Stage(axes)
-    camera = Camera(camera_pixel_size, camera_height_pixels, camera_width_pixels, settings, overview_image, stage)
+    camera_settings = CameraSettings(
+        pixel_size_um=camera_pixel_size,
+        height_pixels=camera_height_pixels,
+        width_pixels=camera_width_pixels)
+    camera = Camera(camera_settings, overview_image, stage)
     objective = Objective(
         name=f"{objective_magnification}x {objective_immersion}",
         magnification=objective_magnification,
