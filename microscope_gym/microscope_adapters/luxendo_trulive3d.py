@@ -7,7 +7,7 @@ import json
 import numpy as np
 import h5py
 from microscope_gym import interface
-from microscope_gym.interface import Objective, Microscope
+from microscope_gym.interface import Objective, Microscope, CameraSettings
 
 
 import paho.mqtt.client as mqtt
@@ -124,7 +124,7 @@ class VendorAPIHandler:
         self.close()
 
 
-class Axis(interface.stage.Axis):
+class Axis(interface.Axis):
     '''Stage axis data class.
 
     properties:
@@ -154,6 +154,9 @@ class Axis(interface.stage.Axis):
     type: str = 'linear'
 
     class Config:
+        # important to avoid api errors when the position is outside the allowed
+        # range (the microscope will not crash the stage, but the api will raise
+        # an error and the stage position will be inconsistent)
         validate_assignment = True
 
 
@@ -218,3 +221,58 @@ class Stage(interface.Stage):
     def _get_stage_status(self):
         message = self.api_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
         return message['data']['axes']
+
+
+class Camera(interface.Camera):
+    def __init__(self, api_handler: VendorAPIHandler, stage: Stage, new_image_timeout_ms=60000):
+        self.file_path = ''
+        self.has_new_image = False
+        self.current_image = np.array([])
+        self.new_image_timeout_ms = new_image_timeout_ms
+        self.metadata = {}
+        self.stage = stage
+        self.api_handler = api_handler
+        self.api_handler.ensure_connection()
+        self.api_handler.subscribe("datahub/cameras")
+        self.default_command = {"type": "device", "data": {"device": "cameras", "command": "get"}}
+        self.api_handler.message_callbacks.append(self._on_new_image)
+        self._get_camera_status()
+
+    def capture_image(self) -> np.ndarray:
+        self._send_capture_command()
+        timeout = self.new_image_timeout_ms / 1000.0
+        poll_interval = 0.01
+        while not self.has_new_image and timeout > 0:
+            time.sleep(poll_interval)
+            timeout -= poll_interval
+        if timeout <= 0:
+            raise APIException(f"Timeout ({self.new_image_timeout_ms / 1000.0} s) while waiting for new image")
+        self.has_new_image = False
+        return self.current_image
+
+    def _send_capture_command(self):
+        # TODO: update stack settings with current stage position
+        command = {"type": "operation", "data": {"device": "execution", "command": "run", "state": True}}
+        self.api_handler.send_command(json.dumps(command))
+
+    def _on_new_image(self, payload_dict: dict):
+        try:
+            new_file_path = payload_dict['data']['file_path']
+        except KeyError:
+            pass
+        if new_file_path != self.file_path:
+            # TODO: parse file path to check if it belongs to this camera
+            self.file_path = new_file_path
+            self.image = self._get_image()
+        return None
+
+    def _get_image(self):
+        with h5py.File(self.file_path, 'r') as image:
+            self.current_image = np.asarray(image['data'])
+            self.metadata = json.loads(image['metadata'][()])
+        self.has_new_image = True
+
+    def _get_camera_status(self):
+        message = self.api_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
+        # TODO: parse camera data to check which one is the correct camera
+        self.settings = CameraSettings(**message['data']['cameras'][0])
