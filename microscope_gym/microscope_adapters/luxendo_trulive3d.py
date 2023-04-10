@@ -91,6 +91,7 @@ class VendorAPIHandler:
         self.subscribed_topics.append(topic)
         if self.connected:
             self.mqttc.subscribe(topic)
+            # TODO: add topic specific callbacks self.mqttc.message_callback_add(topic, callback)
 
     def publish(self, topic: str, payload: str):
         self._publish_time = time.time()
