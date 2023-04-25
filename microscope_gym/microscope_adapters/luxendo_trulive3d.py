@@ -144,8 +144,6 @@ class Axis(interface.Axis):
             name of the device the axis belongs to
         type: str
             type of the axis (linear, rotary, ...)
-        is_moving: bool
-            True if the axis is moving, False otherwise.
     '''
     position_um: float = Field(..., alias='target')
     value: float
