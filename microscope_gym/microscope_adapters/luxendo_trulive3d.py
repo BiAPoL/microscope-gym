@@ -236,7 +236,7 @@ class Camera(interface.Camera):
         self.api_handler.subscribe("datahub/cameras")
         self.default_command = {"type": "device", "data": {"device": "cameras", "command": "get"}}
         self.api_handler.message_callbacks.append(self._on_new_image)
-        self._get_camera_status()
+        self.configure_camera()
 
     def capture_image(self) -> np.ndarray:
         self._send_capture_command()
@@ -250,6 +250,11 @@ class Camera(interface.Camera):
         # TODO: remoe new stack and experiment settings with current stage position
         self.has_new_image = False
         return self.current_image
+
+    def configure_camera(self):
+        message = self.api_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
+        # TODO: parse camera data to check which one is the correct camera
+        self.settings = CameraSettings(**message['data']['cameras'][0])
 
     def _send_capture_command(self):
         # TODO: add new stack and experiment settings with current stage position
@@ -272,8 +277,3 @@ class Camera(interface.Camera):
             self.current_image = np.asarray(image['data'])
             self.metadata = json.loads(image['metadata'][()])
         self.has_new_image = True
-
-    def _get_camera_status(self):
-        message = self.api_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
-        # TODO: parse camera data to check which one is the correct camera
-        self.settings = CameraSettings(**message['data']['cameras'][0])
