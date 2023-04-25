@@ -13,7 +13,7 @@ from microscope_gym.interface import Objective, Microscope, CameraSettings
 import paho.mqtt.client as mqtt
 
 
-class APIException(Exception):
+class LuxendoAPIException(Exception):
     pass
 
 
@@ -64,7 +64,7 @@ class VendorAPIHandler:
         if result_code == 0:
             print("Disonnected")
         else:
-            raise APIException(f"Connection to MQTT broker lost unexpectedly. Error code: {result_code}")
+            raise LuxendoAPIException(f"Connection to MQTT broker lost unexpectedly. Error code: {result_code}")
 
     def connect(self):
         self.mqttc.connect(self.broker_address, self.broker_port)
@@ -75,7 +75,7 @@ class VendorAPIHandler:
         while not self.connected and time.time() - started < self.reply_timeout_ms / 1000.0:
             time.sleep(0.1)
         if not self.connected:
-            raise APIException(f"Connection to MQTT broker timed out after {self.reply_timeout_ms / 1000.0} s")
+            raise LuxendoAPIException(f"Connection to MQTT broker timed out after {self.reply_timeout_ms / 1000.0} s")
 
     def ensure_connection(self):
         if not self.connected:
@@ -117,7 +117,7 @@ class VendorAPIHandler:
             waited += poll_interval_ms
             if not self.waiting_for_reply:
                 return self.reply_json
-        raise APIException(
+        raise LuxendoAPIException(
             f"Timeout ({self.reply_timeout_ms / 1000.0} s) while waiting for reply to command: {self.last_published}")
 
     def __del__(self):
@@ -246,7 +246,7 @@ class Camera(interface.Camera):
             time.sleep(poll_interval)
             timeout -= poll_interval
         if timeout <= 0:
-            raise APIException(f"Timeout ({self.new_image_timeout_ms / 1000.0} s) while waiting for new image")
+            raise LuxendoAPIException(f"Timeout ({self.new_image_timeout_ms / 1000.0} s) while waiting for new image")
         # TODO: remoe new stack and experiment settings with current stage position
         self.has_new_image = False
         return self.current_image
