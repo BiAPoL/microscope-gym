@@ -86,12 +86,13 @@ class VendorAPIHandler:
         self.mqttc.loop_stop()
         self.mqttc.disconnect()
 
-    def subscribe(self, topic):
+    def subscribe(self, topic: str, callback=None):
         topic = self.main_topic + '/' + topic
         self.subscribed_topics.append(topic)
         if self.connected:
             self.mqttc.subscribe(topic)
-            # TODO: add topic specific callbacks self.mqttc.message_callback_add(topic, callback)
+            if callback is not None:
+                self.mqttc.message_callback_add(topic, callback)
 
     def publish(self, topic: str, payload: str):
         self._publish_time = time.time()
