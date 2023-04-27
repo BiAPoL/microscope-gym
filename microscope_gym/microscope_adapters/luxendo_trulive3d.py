@@ -17,7 +17,7 @@ class LuxendoAPIException(Exception):
     pass
 
 
-class VendorAPIHandler:
+class LuxendoAPIHandler:
     def __init__(self, broker_address: str = "localhost", broker_port: int = 1883,
                  serial_number: str = "", reply_timeout_ms=10000):
         self.broker_address = broker_address
@@ -33,12 +33,12 @@ class VendorAPIHandler:
         self._publish_time: float
         self.message_callbacks = []
 
-        self.mqttc = mqtt.Client()
+        self.mqtt = mqtt.Client()
         self.subscribed_topics = []
 
-        self.mqttc.on_connect = self.on_connect
-        self.mqttc.on_disconnect = self.on_disconnect
-        self.mqttc.on_message = self.on_message
+        self.mqtt.on_connect = self.on_connect
+        self.mqtt.on_disconnect = self.on_disconnect
+        self.mqtt.on_message = self.on_message
 
     def on_message(self, client, userdata, message):
         print("Received message: " + message.topic + " " + str(message.payload))
@@ -52,7 +52,7 @@ class VendorAPIHandler:
         if result_code == 0:
             print("Connected")
             for topic in self.subscribed_topics:
-                self.mqttc.subscribe(topic)
+                self.mqtt.subscribe(topic)
 
             self.connected = True
         else:
@@ -67,8 +67,8 @@ class VendorAPIHandler:
             raise LuxendoAPIException(f"Connection to MQTT broker lost unexpectedly. Error code: {result_code}")
 
     def connect(self):
-        self.mqttc.connect(self.broker_address, self.broker_port)
-        self.mqttc.loop_start()
+        self.mqtt.connect(self.broker_address, self.broker_port)
+        self.mqtt.loop_start()
 
     def wait_for_connection(self):
         started = time.time()
@@ -83,21 +83,21 @@ class VendorAPIHandler:
             self.wait_for_connection()
 
     def close(self):
-        self.mqttc.loop_stop()
-        self.mqttc.disconnect()
+        self.mqtt.loop_stop()
+        self.mqtt.disconnect()
 
     def subscribe(self, topic: str, callback=None):
         topic = self.main_topic + '/' + topic
         self.subscribed_topics.append(topic)
         if self.connected:
-            self.mqttc.subscribe(topic)
+            self.mqtt.subscribe(topic)
             if callback is not None:
-                self.mqttc.message_callback_add(topic, callback)
+                self.mqtt.message_callback_add(topic, callback)
 
     def publish(self, topic: str, payload: str):
         self._publish_time = time.time()
         self.last_published = f"topic: {topic}, payload: {payload}"
-        self.mqttc.publish(topic, payload)
+        self.mqtt.publish(topic, payload)
 
     def send_command(self, command):
         self.publish(self.main_topic + '/gui', command)
@@ -192,7 +192,7 @@ class Stage(interface.Stage):
     def is_moving(self):
         return any([axis.value != axis.position_um for axis in self.axes.values()])
 
-    def __init__(self, api_handler: VendorAPIHandler):
+    def __init__(self, api_handler: LuxendoAPIHandler):
         self.api_handler = api_handler
         self.api_handler.ensure_connection()
         self.api_handler.subscribe("embedded/stages")
@@ -223,7 +223,7 @@ class Stage(interface.Stage):
 
 
 class Camera(interface.Camera):
-    def __init__(self, api_handler: VendorAPIHandler, stage: Stage, new_image_timeout_ms=60000):
+    def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, new_image_timeout_ms=60000):
         self.file_path = ''
         self.has_new_image = False
         self.current_image = np.array([])
