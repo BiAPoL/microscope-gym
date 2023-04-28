@@ -1,13 +1,16 @@
 from collections import OrderedDict
 from typing import Optional, List, Tuple
-from pydantic import Field, validator
+from pydantic import Field, validator, BaseModel
 from copy import deepcopy
 import time
+import re
+from warnings import warn
 import json
 import numpy as np
 import h5py
+from pathlib import Path
 from microscope_gym import interface
-from microscope_gym.interface import Objective, Microscope, CameraSettings
+from microscope_gym.interface import Objective, Microscope
 
 
 import paho.mqtt.client as mqtt
@@ -41,7 +44,7 @@ class LuxendoAPIHandler:
         self.mqtt.on_message = self.on_message
 
     def on_message(self, client, userdata, message):
-        print("Received message: " + message.topic + " " + str(message.payload))
+        # print("Received message: " + message.topic + " " + str(message.payload))
         self.latest_message = message
         self.reply_json = json.loads(message.payload)
         self.waiting_for_reply = False
@@ -222,22 +225,103 @@ class Stage(interface.Stage):
         return message['data']['axes']
 
 
+class ROIProperty(BaseModel):
+    min: int
+    max: int
+    inc: int
+    value: int
+
+    @validator('value', pre=True, always=True)
+    @classmethod
+    def validate_value(cls, v, values):
+        if v < values['min']:
+            raise ValueError(f"Value {v} is smaller than min {values['min']}")
+        if v > values['max']:
+            raise ValueError(f"Value {v} is larger than max {values['max']}")
+        if v % values['inc'] != 0:
+            raise ValueError(f"Value {v} is not a multiple of increment {values['inc']}")
+        return v
+
+    class Config:
+        validate_assignment = True
+
+
+class CameraSettings(BaseModel):
+    name: str
+    width_props: ROIProperty
+    height_props: ROIProperty
+    top_props: ROIProperty
+    left_props: ROIProperty
+    width_pixels: int
+    height_pixels: int
+    top: int
+    left: int
+    exposure_time_ms: float = Field(50.0, ge=0.0, alias='exposure')
+    delay: float = Field(12.0, ge=12.0)
+    pixel_size_um: float = 6.5
+
+    @validator('top')
+    @classmethod
+    def validate_top(cls, v, values):
+        values['top_props'].value = v
+        if v + values['height_pixels'] > values['height_props'].max:
+            raise ValueError(f"ROI top {v} + height {values['height_pixels']} exceeds max {values['height_props'].max}")
+        return int(v)
+
+    @validator('left')
+    @classmethod
+    def validate_left(cls, v, values):
+        values['left_props'].value = v
+        if v + values['width_pixels'] > values['width_props'].max:
+            raise ValueError(f"ROI left {v} + width {values['width_pixels']} exceeds max {values['width_props'].max}")
+        return int(v)
+
+    @validator('width_pixels')
+    @classmethod
+    def validate_width_pixels(cls, v, values):
+        values['width_props'].value = v
+        return int(v)
+
+    @validator('height_pixels')
+    @classmethod
+    def validate_height_pixels(cls, v, values):
+        values['height_props'].value = v
+        return int(v)
+
+    class Config:
+        validate_assignment = True
+
+
 class Camera(interface.Camera):
     def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, new_image_timeout_ms=60000):
-        self.file_path = ''
+        self.file_paths = {}
         self.has_new_image = False
-        self.current_image = np.array([])
+        self.current_images = {}
+        self.current_metadatas = {}
         self.new_image_timeout_ms = new_image_timeout_ms
         self.metadata = {}
         self.stage = stage
         self.api_handler = api_handler
         self.api_handler.ensure_connection()
-        self.api_handler.subscribe("datahub/cameras")
-        self.default_command = {"type": "device", "data": {"device": "cameras", "command": "get"}}
-        self.api_handler.message_callbacks.append(self._on_new_image)
-        self.configure_camera()
+        self.api_handler.subscribe("datahub/cameras/#", self._update_camera)
+        self.api_handler.subscribe("embedded/cameras", self._update_camera)
+        self.api_handler.subscribe("embedded/timings", self._update_exposure_settings)
+        self.default_command = {"type": "operation", "data": {"device": "channels", "command": "get"}}
+        self.timings_command = {"type": "device", "data": {"device": "timings", "command": "set"}}
+        self.cameras_command = {"type": "device", "data": {"device": "cameras", "command": "setroi"}}
+        self.file_command = {
+            "type": "device",
+            "data": {
+                "device": "disk",
+                "command": "getconfig",
+                "type": "camerasaving"}}
+        self.active_channel = "channel_0"
+        self.cameras = {}
+        self.serial_number_names = {}
+        self._get_config()
 
     def capture_image(self) -> np.ndarray:
+        self.has_new_image = False
         self._send_capture_command()
         timeout = self.new_image_timeout_ms / 1000.0
         poll_interval = 0.01
@@ -248,31 +332,90 @@ class Camera(interface.Camera):
             raise LuxendoAPIException(f"Timeout ({self.new_image_timeout_ms / 1000.0} s) while waiting for new image")
         # TODO: remoe new stack and experiment settings with current stage position
         self.has_new_image = False
-        return self.current_image
+        return self.current_images
 
-    def configure_camera(self):
-        message = self.api_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
-        # TODO: parse camera data to check which one is the correct camera
-        self.settings = CameraSettings(**message['data']['cameras'][0])
+    def configure_camera(self, settings: CameraSettings) -> None:
+        command = deepcopy(self.timings_command)
+        command['data']['timings'] = {}
+        command['data']['timings']['exposure'] = settings.exposure_time_ms
+        command['data']['timings']['delaybefore'] = 0
+        command['data']['timings']['delayafter'] = settings.delay
+        self.api_handler.send_command(json.dumps(command))
+        command = deepcopy(self.cameras_command)
+        command['data']['name'] = settings.name
+        command['data']['roi'] = {}
+        command['data']['roi']['top'] = settings.top
+        command['data']['roi']['left'] = settings.left
+        command['data']['roi']['width'] = settings.width_pixels
+        command['data']['roi']['height'] = settings.height_pixels
+        self.api_handler.publish(self.api_handler.main_topic + "/gui/datahub", json.dumps(command))
+
+    def _update_camera(self, client, userdata, message):
+        print(message.payload)
+        data = json.loads(message.payload)['data']
+        if data['device'] == 'cameras':
+            if 'mode' in data.keys() \
+                    and data['mode']["value"] == 'area' \
+                    and 'roi' in data.keys():
+                top = ROIProperty(**data['roi']['top'])
+                left = ROIProperty(**data['roi']['left'])
+                width = ROIProperty(**data['roi']['width'])
+                height = ROIProperty(**data['roi']['height'])
+                self.cameras[data['name']] = CameraSettings(name=data['name'],
+                                                            top_props=top,
+                                                            left_props=left,
+                                                            width_props=width,
+                                                            height_props=height,
+                                                            top=top.value,
+                                                            left=left.value,
+                                                            width_pixels=width.value,
+                                                            height_pixels=height.value)
+            if 'sn' in data.keys() and 'name' in data.keys():
+                self.serial_number_names[data['sn']] = data['name']
+            if 'file_paths' in data.keys():
+                cam_name = self.serial_number_names[data['sn']]
+                self.file_paths[cam_name] = [Path(path_string) for path_string in data['file_paths']]
+                self._load_images()
+
+    def _update_exposure_settings(self, client, userdata, message):
+        payload_dict = json.loads(message.payload)
+        for camera in self.cameras.values():
+            camera.exposure_time_ms = payload_dict['data']['exposure']
+            camera.delay = payload_dict['data']['delay']
+
+    def _get_current_path(self):
+        self.api_handler.publish(self.api_handler.main_topic + "/gui/directory", json.dumps(self.file_command))
 
     def _send_capture_command(self):
         # TODO: add new stack and experiment settings with current stage position
         command = {"type": "operation", "data": {"device": "execution", "command": "run", "state": True}}
         self.api_handler.send_command(json.dumps(command))
 
-    def _on_new_image(self, payload_dict: dict):
-        try:
-            new_file_path = payload_dict['data']['file_path']
-        except KeyError:
-            pass
-        if new_file_path != self.file_path:
-            # TODO: parse file path to check if it belongs to this camera
-            self.file_path = new_file_path
-            self.image = self._get_image()
-        return None
+    def _load_images(self):
+        time.sleep(1)
+        for name, paths in self.file_paths.items():
+            self.current_images[name] = []
+            self.current_metadatas[name] = []
+            for path in paths:
+                print(path)
+                with h5py.File(path, 'r') as image:
+                    print(image)
+                    self.current_metadatas[name].append(json.loads(image['metadata'][()]))
+                    self.current_images[name].append(np.asarray(image['Data']))
+                self.has_new_image = True
 
-    def _get_image(self):
-        with h5py.File(self.file_path, 'r') as image:
-            self.current_image = np.asarray(image['data'])
-            self.metadata = json.loads(image['metadata'][()])
-        self.has_new_image = True
+    def _get_config(self):
+        command = {
+            "type": "operation",
+            "data": {
+                "device": "system",
+                "command": "scopeconfig"
+            }
+        }
+        self.api_handler.send_command(json.dumps(command))
+        timeout = 10
+        while self.cameras == {} and timeout > 0:
+            time.sleep(0.1)
+            timeout -= 0.1
+        if timeout <= 0:
+            raise LuxendoAPIException("Timeout while waiting for camera configuration")
