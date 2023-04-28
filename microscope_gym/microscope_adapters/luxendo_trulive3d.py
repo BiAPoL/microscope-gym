@@ -222,7 +222,7 @@ class Stage(interface.Stage):
         for name, position in zip(axis_names, positions):
             self.axes[name].position_um = position
         command = self.default_command.copy()
-        command.data = AxisCommand(axes=list(self.axes.values()))
+        command.data = AxisCommand(device="stages", axes=list(self.axes.values()))
         self.api_handler.send_command(command.json(by_alias=True))
 
     def _message_callback(self, payload_dict: dict):
