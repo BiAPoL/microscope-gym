@@ -20,6 +20,16 @@ class LuxendoAPIException(Exception):
     pass
 
 
+class APIData(BaseModel):
+    device: str
+    command: str = "get"
+
+
+class APICommand(BaseModel):
+    type: str = "device"
+    data: APIData
+
+
 class LuxendoAPIHandler:
     def __init__(self, broker_address: str = "localhost", broker_port: int = 1883,
                  serial_number: str = "", reply_timeout_ms=10000):
@@ -162,6 +172,11 @@ class Axis(interface.Axis):
         validate_assignment = True
 
 
+class AxisCommand(APIData):
+    command: str = "set"
+    axes: List[Axis]
+
+
 class Stage(interface.Stage):
     '''Stage class.
 
@@ -199,18 +214,16 @@ class Stage(interface.Stage):
         self.api_handler = api_handler
         self.api_handler.ensure_connection()
         self.api_handler.subscribe("embedded/stages")
-        self.default_command = {"type": "device", "data": {"device": "stages", "command": "get"}}
+        self.default_command = APICommand(data=APIData(device="stages"))
         self.api_handler.message_callbacks.append(self._message_callback)
         self._get_stage_status()
 
     def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
-        command = deepcopy(self.default_command)
-        command['data']['command'] = 'set'
-        command['data']['axes'] = []
         for name, position in zip(axis_names, positions):
             self.axes[name].position_um = position
-            command['data']['axes'].append({"name": name, "value": position})
-        self.api_handler.send_command(json.dumps(command))
+        command = self.default_command.copy()
+        command.data = AxisCommand(axes=list(self.axes.values()))
+        self.api_handler.send_command(command.json(by_alias=True))
 
     def _message_callback(self, payload_dict: dict):
         axes = OrderedDict()
@@ -221,7 +234,7 @@ class Stage(interface.Stage):
             self.axes = axes
 
     def _get_stage_status(self):
-        message = self.api_handler.send_command_and_wait_for_reply(json.dumps(self.default_command))
+        message = self.api_handler.send_command_and_wait_for_reply(self.default_command.json())
         return message['data']['axes']
 
 
@@ -306,6 +319,7 @@ class Camera(interface.Camera):
         self.api_handler.subscribe("datahub/cameras/#", self._update_camera)
         self.api_handler.subscribe("embedded/cameras", self._update_camera)
         self.api_handler.subscribe("embedded/timings", self._update_exposure_settings)
+        self.api_handler.subscribe("embedded/channels", self._update_channels)
         self.default_command = {"type": "operation", "data": {"device": "channels", "command": "get"}}
         self.timings_command = {"type": "device", "data": {"device": "timings", "command": "set"}}
         self.cameras_command = {"type": "device", "data": {"device": "cameras", "command": "setroi"}}
