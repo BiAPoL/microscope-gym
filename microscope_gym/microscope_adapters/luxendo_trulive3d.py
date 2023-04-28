@@ -1,9 +1,10 @@
 from collections import OrderedDict
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Any
 from pydantic import Field, validator, BaseModel
 from copy import deepcopy
 import time
 import re
+from abc import ABC, abstractmethod
 from warnings import warn
 import json
 import numpy as np
@@ -138,6 +139,69 @@ class LuxendoAPIHandler:
         self.close()
 
 
+class BaseConfig(ABC):
+    '''Base class that gets and sets API configuration data.'''
+
+    def __init__(self, api_handler: LuxendoAPIHandler, main_topic: str, request_command: APICommand) -> None:
+        self.data = None
+        self.timeout = 10
+        self.api_handler = api_handler
+        self.main_topic = main_topic
+        self.api_handler.ensure_connection()
+        self.api_handler.subscribe(self.main_topic, self._update)
+        self.request_command = request_command
+        self.waiting_for_data = False
+        self.request_configuration()
+
+    def request_configuration(self):
+        self._send_command(self.request_command.data)
+
+    def wait_for_reply(self):
+        timeout = self.timeout
+        while self.waiting_for_data and timeout > 0:
+            time.sleep(0.01)
+            timeout -= 0.01
+        if timeout <= 0:
+            raise TimeoutError(f"Timeout waiting for configuration data for {self.__class__.__name__}")
+
+    @abstractmethod
+    def _parse_data(self, payload_dict: dict) -> Any:
+        pass
+
+    def _update(self, client, userdata, msg):
+        payload_dict = json.loads(msg.payload)
+        self.data = self._parse_data(payload_dict)
+        self.waiting_for_data = False
+
+    def _send_command(self, data: APIData):
+        command = self.request_command.copy()
+        command.data = data
+        self.waiting_for_data = True
+        self.api_handler.send_command(command.json())
+        self.wait_for_reply()
+
+
+class ExperimentConfig(BaseConfig):
+    '''Get and set device configuration.'''
+    device: str
+    data_class: APIData
+
+    def __init__(self, api_handler: LuxendoAPIHandler) -> None:
+        super().__init__(api_handler, "embedded/" + self.device, APICommand(type="operation", data=APIData(device=self.device)))
+
+    def add_channel(self):
+        data = self.request_command.data.copy()
+        data.command = "add"
+        self._send_command(data)
+
+    def remove_channel(self, channel_name: str):
+        data = DelCommand(name=channel_name, device=self.device)
+        self._send_command(data)
+
+    def _parse_data(self, payload_dict: dict):
+        return [self.data_class(**channel_data) for channel_data in payload_dict['data'][self.device]]
+
+
 class Axis(interface.Axis):
     '''Stage axis data class.
 
@@ -211,6 +275,7 @@ class Stage(interface.Stage):
         return any([axis.value != axis.position_um for axis in self.axes.values()])
 
     def __init__(self, api_handler: LuxendoAPIHandler):
+        # TODO: refactor to use BaseConfig
         self.api_handler = api_handler
         self.api_handler.ensure_connection()
         self.api_handler.subscribe("embedded/stages")
@@ -305,6 +370,30 @@ class CameraSettings(BaseModel):
         validate_assignment = True
 
 
+class ChannelDevice(BaseModel):
+    name: str
+    type: str
+    text: str
+
+
+class Channel(BaseModel):
+    name: str
+    description: str = ""
+    devices: List[ChannelDevice]
+
+
+class DelCommand(APIData):
+    command: str = "del"
+    device: str
+    name: str
+
+
+class ChannelConfig(ExperimentConfig):
+    '''Get and set channel configuration.'''
+    device = "channels"
+    data_class = Channel
+
+
 class Camera(interface.Camera):
     def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, new_image_timeout_ms=60000):
         self.file_paths = {}
@@ -319,8 +408,8 @@ class Camera(interface.Camera):
         self.api_handler.subscribe("datahub/cameras/#", self._update_camera)
         self.api_handler.subscribe("embedded/cameras", self._update_camera)
         self.api_handler.subscribe("embedded/timings", self._update_exposure_settings)
-        self.api_handler.subscribe("embedded/channels", self._update_channels)
-        self.default_command = {"type": "operation", "data": {"device": "channels", "command": "get"}}
+        # self.api_handler.subscribe("embedded/channels", self._update_channels)
+        # self.channels_command = {"type": "operation", "data": {"device": "channels", "command": "get"}}
         self.timings_command = {"type": "device", "data": {"device": "timings", "command": "set"}}
         self.cameras_command = {"type": "device", "data": {"device": "cameras", "command": "setroi"}}
         self.file_command = {
