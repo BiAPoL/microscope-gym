@@ -417,8 +417,8 @@ class NewStack(APIData, Stack):
 
 class StackConfig(ExperimentConfig):
     '''Get and set stack configuration.'''
-    device = "stacks"
-    data_class = Stack
+    device: str = "stacks"
+    data_class: Stack
 
     def new_stack_from_stage(self, stage: Stage) -> NewStack:
         stack = NewStack(
