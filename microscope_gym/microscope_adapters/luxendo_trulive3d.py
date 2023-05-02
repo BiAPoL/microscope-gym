@@ -173,11 +173,11 @@ class BaseConfig(ABC):
         self.data = self._parse_data(payload_dict)
         self.waiting_for_data = False
 
-    def _send_command(self, data: APIData):
+    def _send_command(self, data: APIData, **kwargs):
         command = self.request_command.copy()
         command.data = data
         self.waiting_for_data = True
-        self.api_handler.send_command(command.json())
+        self.api_handler.send_command(command.json(**kwargs))
         self.wait_for_reply()
 
 
@@ -189,13 +189,13 @@ class ExperimentConfig(BaseConfig):
     def __init__(self, api_handler: LuxendoAPIHandler) -> None:
         super().__init__(api_handler, "embedded/" + self.device, APICommand(type="operation", data=APIData(device=self.device)))
 
-    def add_channel(self):
+    def add_element(self):
         data = self.request_command.data.copy()
         data.command = "add"
         self._send_command(data)
 
-    def remove_channel(self, channel_name: str):
-        data = DelCommand(name=channel_name, device=self.device)
+    def remove_element(self, name: str):
+        data = DelCommand(name=name, device=self.device)
         self._send_command(data)
 
     def _parse_data(self, payload_dict: dict):
@@ -392,6 +392,49 @@ class ChannelConfig(ExperimentConfig):
     '''Get and set channel configuration.'''
     device = "channels"
     data_class = Channel
+
+
+class StackElement(BaseModel):
+    name: str
+    start: int
+    end: int
+    instack: Optional[bool]
+    canTile: Optional[bool]
+
+
+class Stack(BaseModel):
+    elements: List[StackElement]
+    n: int
+    reps: int
+    name: str
+    ref: Optional[str]
+    description: str
+
+
+class NewStack(APIData, Stack):
+    pass
+
+
+class StackConfig(ExperimentConfig):
+    '''Get and set stack configuration.'''
+    device = "stacks"
+    data_class = Stack
+
+    def new_stack_from_stage(self, stage: Stage) -> NewStack:
+        stack = NewStack(
+            device="stacks",
+            command="add",
+            elements=[],
+            n=1,
+            reps=1,
+            name=f"stack_{len(self.data)}",
+            description="created by Mic Gym API")
+        for axis in stage.axes.values():
+            stack.elements.append(StackElement(start=axis.position_um, name=axis.name, end=axis.position_um))
+        return stack
+
+    def add_element(self, new_stack: NewStack):
+        self._send_command(data=new_stack, exclude_unset=True)
 
 
 class Camera(interface.Camera):
