@@ -503,6 +503,10 @@ class EventConfig(ExperimentConfig):
         command_data = EventCommand(device="events", command="del", event=event_name, trigger=trigger_name)
         self._send_command(data=command_data, exclude_unset=True)
 
+    def _parse_data(self, payload_dict: dict):
+        # TODO: parse triggers and tasks into events
+        pass
+
 
 class Camera(interface.Camera):
     def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, new_image_timeout_ms=60000):
