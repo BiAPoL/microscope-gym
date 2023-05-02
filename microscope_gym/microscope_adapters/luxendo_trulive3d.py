@@ -199,7 +199,7 @@ class ExperimentConfig(BaseConfig):
         self._send_command(data)
 
     def _parse_data(self, payload_dict: dict):
-        return [self.data_class(**channel_data) for channel_data in payload_dict['data'][self.device]]
+        return [self.data_class(**device_data) for device_data in payload_dict['data'][self.device]]
 
 
 class Axis(interface.Axis):
@@ -418,7 +418,7 @@ class NewStack(APIData, Stack):
 class StackConfig(ExperimentConfig):
     '''Get and set stack configuration.'''
     device: str = "stacks"
-    data_class: Stack
+    data_class = Stack
 
     def new_stack_from_stage(self, stage: Stage) -> NewStack:
         stack = NewStack(
@@ -435,6 +435,73 @@ class StackConfig(ExperimentConfig):
 
     def add_element(self, new_stack: NewStack):
         self._send_command(data=new_stack, exclude_unset=True)
+
+
+class Time(BaseModel):
+    h: int
+    m: int
+    s: int
+
+
+class Trigger(BaseModel):
+    name: str
+    type: str = "StartIntervalRepeats"
+    start: Time = Time(h=0, m=0, s=0)
+    interval: Time = Time(h=0, m=0, s=0)
+    reps: int
+
+
+class Task(BaseModel):
+    name: str
+    type: str = "StackChannel"
+    channel: str = Field(..., description="name of the channel to be used for the task")
+    stack: str = Field(..., description="name of the stack to be used for the task")
+    configuration: str = "default"
+    order: int = 0
+    ablation: list = []  # TODO: add ablation model
+
+
+class Event(BaseModel):
+    name: str
+    tasks: List[Task]
+    triggers: List[Trigger]
+
+
+class Events(APIData):
+    device: str = "events"
+    events: List[Event]
+
+
+class EventCommand(APIData):
+    device: str = "events"
+    command: str = "addtask"
+    event: str = Field(..., description="name of the event to which the task should be added")
+    tasks: Optional[List[Task]]
+    triggers: Optional[List[Trigger]]
+    task: Optional[str]
+    trigger: Optional[str]
+
+
+class EventConfig(ExperimentConfig):
+    '''Get and set event configuration.'''
+    device: str = "events"
+    data_class = Events
+
+    def add_task(self, event_name: str, task: Task):
+        command_data = EventCommand(device="events", command="addtask", event=event_name, tasks=[task])
+        self._send_command(data=command_data, exclude_unset=True)
+
+    def del_task(self, event_name: str, task_name: str):
+        command_data = EventCommand(device="events", command="del", event=event_name, task=task_name)
+        self._send_command(data=command_data, exclude_unset=True)
+
+    def add_trigger(self, event_name: str, trigger: Trigger):
+        command_data = EventCommand(device="events", command="addtrigger", event=event_name, triggers=[trigger])
+        self._send_command(data=command_data, exclude_unset=True)
+
+    def del_trigger(self, event_name: str, trigger_name: str):
+        command_data = EventCommand(device="events", command="del", event=event_name, trigger=trigger_name)
+        self._send_command(data=command_data, exclude_unset=True)
 
 
 class Camera(interface.Camera):
