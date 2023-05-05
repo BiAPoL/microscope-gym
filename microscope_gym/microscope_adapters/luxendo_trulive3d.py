@@ -230,8 +230,8 @@ class Axis(interface.Axis):
         type: str
             type of the axis (linear, rotary, ...)
     '''
-    position_um: float = Field(..., alias='target')
-    value: float
+    position_um: float = Field(..., alias='value')
+    target: float
     guiName: Optional[str]
     partOf: Optional[str]
     type: str = 'linear'
@@ -285,7 +285,7 @@ class Stage(BaseConfig, interface.Stage):
                 data=APIData(device="stages")))
 
     def is_moving(self):
-        return any([axis.value != axis.position_um for axis in self.axes.values()])
+        return any([axis.target != axis.position_um for axis in self.axes.values()])
 
     def _parse_data(self, payload_dict: dict) -> OrderedDict:
         axes = OrderedDict()
@@ -300,9 +300,8 @@ class Stage(BaseConfig, interface.Stage):
         for name, position in zip(axis_names, positions):
             self.axes[name].position_um = position
         command = self.request_command.copy()
-        command.data = AxisCommand(command="set", device="stages", axes=[
-                                   {"name": axis.name, "value": axis.position_um} for axis in self.axes.values()])
-        self.api_handler.send_command(command.json())
+        command.data = AxisCommand(command="set", device="stages", axes=list(self.axes.values()))
+        self.api_handler.send_command(command.json(by_alias=True))
 
     def _process_stage_reply(self, client, userdata, message):
         payload_dict = json.loads(message.payload)
