@@ -21,16 +21,6 @@ class LuxendoAPIException(Exception):
     pass
 
 
-class APIData(BaseModel):
-    device: str
-    command: str = "get"
-
-
-class APICommand(BaseModel):
-    type: str = "device"
-    data: APIData
-
-
 class LuxendoAPIHandler:
     def __init__(self, broker_address: str = "localhost", broker_port: int = 1883,
                  serial_number: str = "", reply_timeout_ms=10000):
@@ -139,6 +129,22 @@ class LuxendoAPIHandler:
         self.close()
 
 
+class APIData(BaseModel):
+    device: str
+    command: str = "get"
+
+
+class APICommand(BaseModel):
+    type: str = "device"
+    data: APIData
+
+
+class DelCommand(APIData):
+    command: str = "del"
+    device: str
+    name: str
+
+
 class BaseConfig(ABC):
     '''Base class that gets and sets API configuration data.'''
 
@@ -185,6 +191,7 @@ class ExperimentConfig(BaseConfig):
     '''Get and set device configuration.'''
     device: str
     data_class: APIData
+    del_command_class = DelCommand
 
     def __init__(self, api_handler: LuxendoAPIHandler) -> None:
         super().__init__(api_handler, "embedded/" + self.device, APICommand(type="operation", data=APIData(device=self.device)))
@@ -195,7 +202,7 @@ class ExperimentConfig(BaseConfig):
         self._send_command(data)
 
     def remove_element(self, name: str):
-        data = DelCommand(name=name, device=self.device)
+        data = self.del_command_class(name=name, device=self.device)
         self._send_command(data)
 
     def _parse_data(self, payload_dict: dict):
@@ -382,12 +389,6 @@ class Channel(BaseModel):
     devices: List[ChannelDevice]
 
 
-class DelCommand(APIData):
-    command: str = "del"
-    device: str
-    name: str
-
-
 class ChannelConfig(ExperimentConfig):
     '''Get and set channel configuration.'''
     device = "channels"
@@ -482,10 +483,15 @@ class EventCommand(APIData):
     trigger: Optional[str]
 
 
+class EventDelCommand(DelCommand):
+    event: str = Field(..., alias="name", description="name of the event from which the task should be deleted")
+
+
 class EventConfig(ExperimentConfig):
     '''Get and set event configuration.'''
     device: str = "events"
-    data_class = Events
+    data_class = Event
+    del_command_class = EventDelCommand
 
     def add_task(self, event_name: str, task: Task):
         command_data = EventCommand(device="events", command="addtask", event=event_name, tasks=[task])
@@ -502,10 +508,6 @@ class EventConfig(ExperimentConfig):
     def del_trigger(self, event_name: str, trigger_name: str):
         command_data = EventCommand(device="events", command="del", event=event_name, trigger=trigger_name)
         self._send_command(data=command_data, exclude_unset=True)
-
-    def _parse_data(self, payload_dict: dict):
-        # TODO: parse triggers and tasks into events
-        pass
 
 
 class Camera(interface.Camera):
