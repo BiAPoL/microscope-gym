@@ -245,10 +245,10 @@ class Axis(interface.Axis):
 
 class AxisCommand(APIData):
     command: str = "set"
-    axes: List[Axis]
+    axes: list
 
 
-class Stage(interface.Stage):
+class Stage(BaseConfig, interface.Stage):
     '''Stage class.
 
     methods:
@@ -258,10 +258,8 @@ class Stage(interface.Stage):
             wait until stage is stopped, return True if stopped, False if timeout
 
     properties:
-        axes: list[Axes]
+        axes: OrderedDict[Axes]
             list of Axis objects
-        axes_dict: dict
-            dictionary where keys are the axes names
         position_um: list[float]
             list of positions in um
         z_position_um(): float
@@ -278,26 +276,36 @@ class Stage(interface.Stage):
             x range in µm
     '''
 
+    def __init__(self, api_handler: LuxendoAPIHandler) -> None:
+        super().__init__(
+            api_handler=api_handler,
+            main_topic="embedded/stages",
+            request_command=APICommand(
+                type="device",
+                data=APIData(device="stages")))
+
     def is_moving(self):
         return any([axis.value != axis.position_um for axis in self.axes.values()])
 
-    def __init__(self, api_handler: LuxendoAPIHandler):
-        # TODO: refactor to use BaseConfig
-        self.api_handler = api_handler
-        self.api_handler.ensure_connection()
-        self.api_handler.subscribe("embedded/stages")
-        self.default_command = APICommand(data=APIData(device="stages"))
-        self.api_handler.message_callbacks.append(self._message_callback)
-        self._get_stage_status()
+    def _parse_data(self, payload_dict: dict) -> OrderedDict:
+        axes = OrderedDict()
+        for axis_data in payload_dict['data']['axes']:
+            axis = Axis(**axis_data)
+            axes[axis.name] = axis
+        if len(axes) > 0:
+            self.axes = axes
+        return axes
 
     def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
         for name, position in zip(axis_names, positions):
             self.axes[name].position_um = position
-        command = self.default_command.copy()
-        command.data = AxisCommand(device="stages", axes=list(self.axes.values()))
-        self.api_handler.send_command(command.json(by_alias=True))
+        command = self.request_command.copy()
+        command.data = AxisCommand(command="set", device="stages", axes=[
+                                   {"name": axis.name, "value": axis.position_um} for axis in self.axes.values()])
+        self.api_handler.send_command(command.json())
 
-    def _message_callback(self, payload_dict: dict):
+    def _process_stage_reply(self, client, userdata, message):
+        payload_dict = json.loads(message.payload)
         axes = OrderedDict()
         for axis_data in payload_dict['data']['axes']:
             axis = Axis(**axis_data)
@@ -511,7 +519,8 @@ class EventConfig(ExperimentConfig):
 
 
 class Camera(interface.Camera):
-    def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, new_image_timeout_ms=60000):
+    def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, events: EventConfig,
+                 channels: ChannelConfig, new_image_timeout_ms=60000):
         self.file_paths = {}
         self.has_new_image = False
         self.current_images = {}
