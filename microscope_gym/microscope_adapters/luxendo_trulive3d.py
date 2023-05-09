@@ -53,6 +53,9 @@ class LuxendoAPIHandler:
         for callback in self.message_callbacks:
             callback(self.reply_json)
 
+    # TODO: add callback for individual subscribed topics
+    # def topic_callback(self, callback, client, userdata, flags):
+
     def on_connect(self, client, userdata, flags, result_code):
         if result_code == 0:
             print("Connected")
@@ -97,6 +100,7 @@ class LuxendoAPIHandler:
         if self.connected:
             self.mqtt.subscribe(topic)
             if callback is not None:
+                # TODO: convert callback to partial(self.topic_callback, callback)
                 self.mqtt.message_callback_add(topic, callback)
 
     def publish(self, topic: str, payload: str):
@@ -166,6 +170,7 @@ class BaseConfig(ABC):
         self._send_command(self.request_command.data)
 
     def wait_for_reply(self):
+        # TODO: move to LuxendoAPIHandler
         timeout = self.timeout
         while self.waiting_for_data and timeout > 0:
             time.sleep(0.01)
@@ -178,6 +183,7 @@ class BaseConfig(ABC):
         pass
 
     def _update(self, client, userdata, msg):
+        # TODO: move to LuxendoAPIHandler
         payload_dict = json.loads(msg.payload)
         self.data = self._parse_data(payload_dict)
         self.waiting_for_data = False
