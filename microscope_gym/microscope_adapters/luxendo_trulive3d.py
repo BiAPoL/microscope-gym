@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from typing import Optional, List, Tuple, Any
+import warnings
 from pydantic import Field, validator, BaseModel
 from copy import deepcopy
 import time
@@ -103,8 +104,8 @@ class LuxendoAPIHandler:
         self.last_published = f"topic: {topic}, payload: {payload}"
         self.mqtt.publish(topic, payload)
 
-    def send_command(self, command):
-        self.publish(self.main_topic + '/gui', command)
+    def send_command(self, command, subtopic='/gui'):
+        self.publish(self.main_topic + subtopic, command)
 
     def send_command_and_wait_for_reply(self, command, poll_interval_ms=10):
         self.send_command(command)
@@ -148,13 +149,15 @@ class DelCommand(APIData):
 class BaseConfig(ABC):
     '''Base class that gets and sets API configuration data.'''
 
-    def __init__(self, api_handler: LuxendoAPIHandler, main_topic: str, request_command: APICommand) -> None:
+    def __init__(self, api_handler: LuxendoAPIHandler, main_topic: str,
+                 request_command: APICommand, subtopic='/gui') -> None:
         self.data = None
         self.timeout = 10
         self.api_handler = api_handler
         self.main_topic = main_topic
         self.api_handler.ensure_connection()
         self.api_handler.subscribe(self.main_topic, self._update)
+        self.subtopic = subtopic
         self.request_command = request_command
         self.waiting_for_data = False
         self.request_configuration()
@@ -183,11 +186,11 @@ class BaseConfig(ABC):
         command = self.request_command.copy()
         command.data = data
         self.waiting_for_data = True
-        self.api_handler.send_command(command.json(**kwargs))
+        self.api_handler.send_command(command.json(**kwargs), subtopic=self.subtopic)
         self.wait_for_reply()
 
 
-class ExperimentConfig(BaseConfig):
+class ConfigList(BaseConfig):
     '''Get and set device configuration.'''
     device: str
     data_class: APIData
@@ -396,7 +399,7 @@ class Channel(BaseModel):
     devices: List[ChannelDevice]
 
 
-class ChannelConfig(ExperimentConfig):
+class ChannelConfig(ConfigList):
     '''Get and set channel configuration.'''
     device = "channels"
     data_class = Channel
@@ -423,7 +426,7 @@ class NewStack(APIData, Stack):
     pass
 
 
-class StackConfig(ExperimentConfig):
+class StackConfig(ConfigList):
     '''Get and set stack configuration.'''
     device: str = "stacks"
     data_class = Stack
@@ -494,7 +497,7 @@ class EventDelCommand(DelCommand):
     event: str = Field(..., alias="name", description="name of the event from which the task should be deleted")
 
 
-class EventConfig(ExperimentConfig):
+class EventConfig(ConfigList):
     '''Get and set event configuration.'''
     device: str = "events"
     data_class = Event
@@ -517,8 +520,72 @@ class EventConfig(ExperimentConfig):
         self._send_command(data=command_data, exclude_unset=True)
 
 
+class FolderChild(BaseModel):
+    name: str
+    size: float
+    mime: str
+    type: str
+    creationtime: str
+
+
+class Folder(BaseModel):
+    name: str
+    path: str
+    parent: bool
+    children: List[FolderChild]
+
+
+class DiskMessage(BaseModel):
+    command: str
+    message: str
+    success: bool
+
+
+class Source(BaseModel):
+    name: str
+    free: int
+    size: int
+    speed: float
+
+
+class Sources(BaseModel):
+    options: List[Source]
+    value: str
+
+
+class Disk(APIData):
+    device: str = "disk"
+    command: str = "set"
+    folder: Folder
+    message: DiskMessage
+    selectedpath: str
+    selectedsource: str
+    sources: Sources
+
+
+class DiskCommand(APIData):
+    device: str = "disk"
+    command: str = "getconfig"
+    type: str = "camerasaving"
+
+
+class DiskConfig(BaseConfig):
+
+    def __init__(self, api_handler: LuxendoAPIHandler):
+        super().__init__(
+            api_handler,
+            main_topic="datahub/directory",
+            request_command=APICommand(
+                type="device",
+                data=DiskCommand()),
+            subtopic='/gui/directory')
+
+    def _parse_data(self, payload_dict: dict):
+        return Disk(**payload_dict['data'])
+
+
 class Camera(interface.Camera):
-    def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, events: EventConfig,
+    def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, stacks: StackConfig, events: EventConfig,
                  channels: ChannelConfig, new_image_timeout_ms=60000):
         self.file_paths = {}
         self.has_new_image = False
@@ -527,13 +594,15 @@ class Camera(interface.Camera):
         self.new_image_timeout_ms = new_image_timeout_ms
         self.metadata = {}
         self.stage = stage
+        self.stacks = stacks
+        self.events = events
+        self.channels = channels
+        self.active_channel = "channel_0"
         self.api_handler = api_handler
         self.api_handler.ensure_connection()
         self.api_handler.subscribe("datahub/cameras/#", self._update_camera)
         self.api_handler.subscribe("embedded/cameras", self._update_camera)
         self.api_handler.subscribe("embedded/timings", self._update_exposure_settings)
-        # self.api_handler.subscribe("embedded/channels", self._update_channels)
-        # self.channels_command = {"type": "operation", "data": {"device": "channels", "command": "get"}}
         self.timings_command = {"type": "device", "data": {"device": "timings", "command": "set"}}
         self.cameras_command = {"type": "device", "data": {"device": "cameras", "command": "setroi"}}
         self.file_command = {
@@ -548,6 +617,10 @@ class Camera(interface.Camera):
         self._get_config()
 
     def capture_image(self) -> np.ndarray:
+        assert len(self.channels.data) > 0, "No channels configured, please configure an imaging channel in LuxControl"
+        if len(self.channels.data) > 1:
+            warnings.warn(
+                f"More than one channel configured, using {self.active_channel}. If you want to use a different channel, please use the set_active_channel property to the name of that channel.")
         self.has_new_image = False
         self._send_capture_command()
         timeout = self.new_image_timeout_ms / 1000.0
@@ -615,6 +688,7 @@ class Camera(interface.Camera):
 
     def _send_capture_command(self):
         # TODO: add new stack and experiment settings with current stage position
+
         command = {"type": "operation", "data": {"device": "execution", "command": "run", "state": True}}
         self.api_handler.send_command(json.dumps(command))
 
