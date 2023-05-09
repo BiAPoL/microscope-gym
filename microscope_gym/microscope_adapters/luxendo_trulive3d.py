@@ -586,7 +586,7 @@ class DiskConfig(BaseConfig):
 
 class Camera(interface.Camera):
     def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, stacks: StackConfig, events: EventConfig,
-                 channels: ChannelConfig, new_image_timeout_ms=60000):
+                 channels: ChannelConfig, disk: DiskConfig, new_image_timeout_ms=60000):
         self.file_paths = {}
         self.has_new_image = False
         self.current_images = {}
@@ -597,7 +597,8 @@ class Camera(interface.Camera):
         self.stacks = stacks
         self.events = events
         self.channels = channels
-        self.active_channel = "channel_0"
+        self.active_channel = channels.data[0].name
+        self.disk = disk
         self.api_handler = api_handler
         self.api_handler.ensure_connection()
         self.api_handler.subscribe("datahub/cameras/#", self._update_camera)
