@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from typing import List
+from pathlib import Path
 from pycromanager import Core
 from microscope_gym import interface
 from microscope_gym.interface import Objective, Microscope, Axis
@@ -50,8 +51,14 @@ class Stage(interface.Stage):
 
 
 class Camera(interface.Camera):
-    def __init__(self, mm_core: Core) -> None:
+    def __init__(self, mm_core: Core, save_path: str = '') -> None:
         self.microscope_handler = mm_core
+        if save_path == '':
+            import tempfile
+            self.save_path = Path(tempfile.mkdtemp)
+        else:
+            self.save_path = Path(save_path)
+        self.save_path.mkdir(exist_ok=True, parents=True)
 
     def capture_image(self) -> "numpy.ndarray":
         # Trigger the Snap funtion from MicroManager and get the data
