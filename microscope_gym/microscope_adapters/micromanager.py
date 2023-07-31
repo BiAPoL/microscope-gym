@@ -45,7 +45,7 @@ class Stage(interface.Stage):
         '''
         for name, position in zip(axis_names, positions):
             self.axes[name].position_um = position
-        self.microscope_handler.set_xy_stage_position(self.axes['x'].position_um, self.axes['y'].position_um)
+        self.microscope_handler.set_xy_position(self.axes['x'].position_um, self.axes['y'].position_um)
         self.microscope_handler.set_position(self.axes['z'].position_um)
 
 
