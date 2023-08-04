@@ -224,6 +224,49 @@ class ConfigList(BaseConfig):
         return [self.data_class(**device_data) for device_data in payload_dict['data'][self.device]]
 
 
+class StackElement(BaseModel):
+    name: str
+    start: int
+    end: int
+    instack: Optional[bool]
+    canTile: Optional[bool]
+
+
+class Stack(BaseModel):
+    elements: List[StackElement]
+    n: int
+    reps: int
+    name: str
+    ref: Optional[str]
+    description: str
+
+
+class NewStack(APIData, Stack):
+    pass
+
+
+class StackConfig(ConfigList):
+    '''Get and set stack configuration.'''
+    device: str = "stacks"
+    data_class = Stack
+
+    def add_element(self, stack: Stack):
+        new_stack = NewStack(
+            device="stacks",
+            command="add",
+            elements=stack.elements,
+            n=stack.n,
+            reps=stack.reps,
+            name=stack.name,
+            description=stack.description)
+        self._send_command(data=new_stack, exclude_unset=True)
+
+    def remove_api_generated_elements(self):
+        for stack in self.data:
+            if stack.description == f"MicGymV{interface.__version__}":
+                self.remove_element(stack.name)
+
+
 class Axis(interface.Axis):
     '''Stage axis data class.
 
@@ -301,6 +344,18 @@ class Stage(BaseConfig, interface.Stage):
 
     def is_moving(self):
         return any([axis.target != axis.position_um for axis in self.axes.values()])
+
+    def add_current_position_to_stacks(self, stacks: StackConfig) -> Stack:
+        new_stack = Stack(
+            elements=[],
+            n=1,
+            reps=1,
+            name=f"stack_{len(stacks.data)}",
+            description=f"MicGymV{interface.__version__}")
+        for axis in self.axes.values():
+            new_stack.elements.append(StackElement(start=axis.position_um, name=axis.name, end=axis.position_um))
+        stacks.add_element(new_stack)
+        return new_stack
 
     def _parse_data(self, payload_dict: dict) -> OrderedDict:
         axes = OrderedDict()
@@ -417,49 +472,6 @@ class ChannelConfig(ConfigList):
     data_class = Channel
 
 
-class StackElement(BaseModel):
-    name: str
-    start: int
-    end: int
-    instack: Optional[bool]
-    canTile: Optional[bool]
-
-
-class Stack(BaseModel):
-    elements: List[StackElement]
-    n: int
-    reps: int
-    name: str
-    ref: Optional[str]
-    description: str
-
-
-class NewStack(APIData, Stack):
-    pass
-
-
-class StackConfig(ConfigList):
-    '''Get and set stack configuration.'''
-    device: str = "stacks"
-    data_class = Stack
-
-    def new_stack_from_stage(self, stage: Stage) -> NewStack:
-        stack = NewStack(
-            device="stacks",
-            command="add",
-            elements=[],
-            n=1,
-            reps=1,
-            name=f"stack_{len(self.data)}",
-            description="created by Mic Gym API")
-        for axis in stage.axes.values():
-            stack.elements.append(StackElement(start=axis.position_um, name=axis.name, end=axis.position_um))
-        return stack
-
-    def add_element(self, new_stack: NewStack):
-        self._send_command(data=new_stack, exclude_unset=True)
-
-
 class Time(BaseModel):
     h: int
     m: int
@@ -532,6 +544,73 @@ class EventConfig(ConfigList):
         self._send_command(data=command_data, exclude_unset=True)
 
 
+class TemporaryEvent():
+    def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, active_channel: str = None):
+        self.stage = stage
+        self.stacks = StackConfig(api_handler)
+        self.events = EventConfig(api_handler)
+        self.channels = ChannelConfig(api_handler)
+        assert len(self.channels.data) > 0, "No channels configured, please configure an imaging channel in LuxControl"
+        if active_channel is not None:
+            self.active_channel = active_channel
+        else:
+            self.active_channel = self.channels.data[0].name
+            if len(self.channels.data) > 1:
+                warnings.warn(
+                    f"More than one channel configured, using {self.active_channel}. \
+                        If you want to use a different channel, please set the active_channel \
+                        property to the name of that channel (e.g. 'channel_1').")
+        self.current_stack = None
+        self.events_backup = None
+
+    def __enter__(self) -> 'TemporaryEvent':
+        self.events_backup = deepcopy(self.events.data)
+        if self.events_backup is not None:
+            for event in self.events_backup:
+                self.events.remove_element(event.name)
+        self.stacks_backup = deepcopy(self.stacks.data)
+        if self.stacks_backup is not None:
+            for stack in self.stacks_backup:
+                self.stacks.remove_element(stack.name)
+        self.current_stack = self.stage.add_current_position_to_stacks(self.stacks)
+        self.events.add_element()
+        current_task = Task(
+            name='Task_000',
+            type='StackChannel',
+            channel=self.active_channel,
+            stack=self.current_stack.name,
+            configuration='default',
+            order=0,
+            ablation=[])
+        current_trigger = Trigger(
+            name='Trigger_000',
+            type='StartIntervalRepeats',
+            start=Time(h=0, m=0, s=0),
+            interval=Time(h=0, m=0, s=0), reps=1)
+        self.current_event = self.events.data[-1].name
+        self.events.add_task(self.current_event, current_task)
+        self.events.add_trigger(self.current_event, current_trigger)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.events.remove_element(self.current_event)
+        self.stacks.remove_element(self.current_stack.name)
+        if self.events_backup is not None:
+            for event in self.events_backup:
+                self.events.add_element()
+                name = self.events.data[-1].name
+                for task in event.tasks:
+                    self.events.add_task(name, task)
+                    self.events.wait_for_reply()
+                for trigger in event.triggers:
+                    self.events.add_trigger(name, trigger)
+                    self.events.wait_for_reply()
+        if self.stacks_backup is not None:
+            for stack in self.stacks_backup:
+                self.stacks.add_element(stack)
+                self.stacks.wait_for_reply()
+
+
 class FolderChild(BaseModel):
     name: str
     size: float
@@ -597,8 +676,7 @@ class DiskConfig(BaseConfig):
 
 
 class Camera(interface.Camera):
-    def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, stacks: StackConfig, events: EventConfig,
-                 channels: ChannelConfig, disk: DiskConfig, new_image_timeout_ms=60000):
+    def __init__(self, api_handler: LuxendoAPIHandler, stage: Stage, disk: DiskConfig, new_image_timeout_ms=60000):
         self.file_paths = {}
         self.has_new_image = False
         self.current_images = {}
@@ -606,11 +684,7 @@ class Camera(interface.Camera):
         self.new_image_timeout_ms = new_image_timeout_ms
         self.metadata = {}
         self.stage = stage
-        self.stacks = stacks
-        self.events = events
-        self.channels = channels
-        assert len(channels.data) > 0, "No channels configured, please configure an imaging channel in LuxControl"
-        self.active_channel = channels.data[0].name
+        self.event_handler = TemporaryEvent(api_handler, stage)
         self.disk = disk
         self.api_handler = api_handler
         self.api_handler.ensure_connection()
@@ -631,19 +705,17 @@ class Camera(interface.Camera):
         self._get_config()
 
     def capture_image(self) -> np.ndarray:
-        if len(self.channels.data) > 1:
-            warnings.warn(
-                f"More than one channel configured, using {self.active_channel}. If you want to use a different channel, please use the set_active_channel property to the name of that channel (e.g. 'channel_1').")
         self.has_new_image = False
-        self._send_capture_command()
-        timeout = self.new_image_timeout_ms / 1000.0
-        poll_interval = 0.01
-        while not self.has_new_image and timeout > 0:
-            time.sleep(poll_interval)
-            timeout -= poll_interval
-        if timeout <= 0:
-            raise LuxendoAPIException(f"Timeout ({self.new_image_timeout_ms / 1000.0} s) while waiting for new image")
-        # TODO: remoe new stack and experiment settings with current stage position
+        with self.event_handler:
+            self._send_capture_command()
+            timeout = self.new_image_timeout_ms / 1000.0
+            poll_interval = 0.01
+            while not self.has_new_image and timeout > 0:
+                time.sleep(poll_interval)
+                timeout -= poll_interval
+            if timeout <= 0:
+                raise LuxendoAPIException(
+                    f"Timeout ({self.new_image_timeout_ms / 1000.0} s) while waiting for new image")
         self.has_new_image = False
         return self.current_images
 
@@ -664,7 +736,6 @@ class Camera(interface.Camera):
         self.api_handler.publish(self.api_handler.main_topic + "/gui/datahub", json.dumps(command))
 
     def _update_camera(self, client, userdata, message):
-        print(message.payload)
         data = json.loads(message.payload)['data']
         if data['device'] == 'cameras':
             if 'mode' in data.keys() \
@@ -700,8 +771,6 @@ class Camera(interface.Camera):
         self.api_handler.publish(self.api_handler.main_topic + "/gui/directory", json.dumps(self.file_command))
 
     def _send_capture_command(self):
-        # TODO: add new stack and experiment settings with current stage position
-
         command = {"type": "operation", "data": {"device": "execution", "command": "run", "state": True}}
         self.api_handler.send_command(json.dumps(command))
 
