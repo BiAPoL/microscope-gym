@@ -178,6 +178,9 @@ class BaseConfig(ABC):
         if timeout <= 0:
             raise TimeoutError(f"Timeout waiting for configuration data for {self.__class__.__name__}")
 
+    def is_configured(self):
+        return self.data is not None
+
     @abstractmethod
     def _parse_data(self, payload_dict: dict) -> Any:
         pass
@@ -213,6 +216,9 @@ class ConfigList(BaseConfig):
     def remove_element(self, name: str):
         data = self.del_command_class(name=name, device=self.device)
         self._send_command(data)
+
+    def is_configured(self):
+        return len(self.data) > 0
 
     def _parse_data(self, payload_dict: dict):
         return [self.data_class(**device_data) for device_data in payload_dict['data'][self.device]]
@@ -603,6 +609,7 @@ class Camera(interface.Camera):
         self.stacks = stacks
         self.events = events
         self.channels = channels
+        assert len(channels.data) > 0, "No channels configured, please configure an imaging channel in LuxControl"
         self.active_channel = channels.data[0].name
         self.disk = disk
         self.api_handler = api_handler
