@@ -705,7 +705,7 @@ class Camera(interface.Camera):
         self._get_config()
 
     def take_snapshot(self) -> np.ndarray:
-        # TODO: implement using websocket
+        # TODO: implement using websocket add warning about lower quality
         raise NotImplementedError
 
     def capture_image(self) -> np.ndarray:
