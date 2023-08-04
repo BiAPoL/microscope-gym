@@ -631,10 +631,9 @@ class Camera(interface.Camera):
         self._get_config()
 
     def capture_image(self) -> np.ndarray:
-        assert len(self.channels.data) > 0, "No channels configured, please configure an imaging channel in LuxControl"
         if len(self.channels.data) > 1:
             warnings.warn(
-                f"More than one channel configured, using {self.active_channel}. If you want to use a different channel, please use the set_active_channel property to the name of that channel.")
+                f"More than one channel configured, using {self.active_channel}. If you want to use a different channel, please use the set_active_channel property to the name of that channel (e.g. 'channel_1').")
         self.has_new_image = False
         self._send_capture_command()
         timeout = self.new_image_timeout_ms / 1000.0
