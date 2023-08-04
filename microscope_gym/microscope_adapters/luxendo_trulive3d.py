@@ -704,6 +704,10 @@ class Camera(interface.Camera):
         self.serial_number_names = {}
         self._get_config()
 
+    def take_snapshot(self) -> np.ndarray:
+        # TODO: implement using websocket
+        raise NotImplementedError
+
     def capture_image(self) -> np.ndarray:
         self.has_new_image = False
         with self.event_handler:

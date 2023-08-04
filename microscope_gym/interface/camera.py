@@ -58,6 +58,10 @@ class Camera(ABC):
         self.configure_camera(value)
 
     @abstractmethod
+    def take_snapshot(self) -> "numpy.ndarray":  # type: ignore
+        pass
+
+    @abstractmethod
     def capture_image(self) -> "numpy.ndarray":  # type: ignore
         '''Acquire new image.'''
         pass
