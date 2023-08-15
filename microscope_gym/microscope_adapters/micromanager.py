@@ -1,13 +1,22 @@
+import os.path
 from collections import OrderedDict
 from typing import List
 from pathlib import Path
-from pycromanager import Core
+# from pycromanager import Core
+# [Jamie] I think this should be pymmcore_plus, not pycromanager
+# pycromanager interfaces with the jova objects in the gui
+# pymmcore(_plus) interface directly with the microscope devices
+# defined by the configuration file
+# the goal should be to translate a micromanager .cfg file into a microscope-gym adapter
+# would it be better to just access micromanager directly from the smart module??
+
+from pymmcore_plus import CMMCorePlus, Device, find_micromanager
 from microscope_gym import interface
-from microscope_gym.interface import Objective, Microscope, Axis
+from microscope_gym.interface import Objective, Microscope, Axis, Camera
 
 
 class Stage(interface.Stage):
-    def __init__(self, mm_core: Core) -> None:
+    def __init__(self, mm_core: CMMCorePlus) -> None:
         self.microscope_handler = mm_core
         self.axes = OrderedDict()
         self._get_axes_positions_from_microscope()
@@ -51,7 +60,7 @@ class Stage(interface.Stage):
 
 
 class Camera(interface.Camera):
-    def __init__(self, mm_core: Core, save_path: str = '') -> None:
+    def __init__(self, mm_core: CMMCorePlus, save_path: str = '', micromanager_path: str = '/Applications/Micro-Manager', config_file: str = 'MMConfig_demo.cfg' ) -> None:
         self.microscope_handler = mm_core
         if save_path == '':
             import tempfile
@@ -59,7 +68,57 @@ class Camera(interface.Camera):
         else:
             self.save_path = Path(save_path)
         self.save_path.mkdir(exist_ok=True, parents=True)
+        if find_micromanager() == '':
+            raise Exception('Micro-manager installation not found or environment variable not set.')
+        else:
+            self.micromanager_path = find_micromanager()
+        config_path = os.path.join(mm_dir, config_file)
+        if not Path(config_path):
+            raise Exception(f'Configuration file {config_file} not found in folder {micromanager_path}.')
+        else:
+            print(f'Loading configuration file {config_path}.')
+            self.microscope_handler.loadSystemConfiguration()
 
     def capture_image(self) -> "numpy.ndarray":
-        # Trigger the Snap funtion from MicroManager and get the data
-        pass  # TODO Figure out how to get this from MMCore
+
+        # mmc.snap can take a channel as a parameter (for multi-channel cameras)
+
+        """
+        Trigger the Snap function from MicroManager and get the data
+
+        **from mmcore docs**
+
+        Signature: `mmc.snap(numChannel: 'int | None' = None, *, fix: 'bool' = True) -> 'np.ndarray'`
+
+        Source:
+        def snap(self, numChannel: int | None = None, *, fix: bool = True) -> np.ndarray:
+
+        Snap and return an image.
+
+        :sparkles: *This method is new in `CMMCorePlus`.*
+
+        Convenience for calling `self.snapImage()` followed by returning the value
+        of `self.getImage()`.
+
+        Parameters
+        ----------
+        numChannel : int, optional
+            The camera channel to get the image from.  If None, (the default), then
+            Multi-Channel cameras will return the content of the first channel.
+        fix : bool, default: True
+            If `True` (the default), then images with n_components > 1 (like RGB images)
+            will be reshaped to (w, h, n_components) using `fixImage`.
+
+        Returns
+        -------
+        img : np.ndarray
+
+        Example from pymmcore-plus
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.snapImage()
+        img = self.getImage(numChannel, fix=fix)  # type: ignore
+        self.events.imageSnapped.emit(img)
+        return img
+
+        """
+        return self.microscope_handler.snap()
