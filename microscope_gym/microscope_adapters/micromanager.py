@@ -12,7 +12,7 @@ from pathlib import Path
 
 from pymmcore_plus import CMMCorePlus, Device, find_micromanager
 from microscope_gym import interface
-from microscope_gym.interface import Objective, Microscope, Axis, Camera
+from microscope_gym.interface import Objective, Microscope, Axis, Camera, CameraSettings
 
 
 class Stage(interface.Stage):
@@ -58,7 +58,7 @@ class Stage(interface.Stage):
         self.microscope_handler.set_xy_position(self.axes['x'].position_um, self.axes['y'].position_um)
         self.microscope_handler.set_position(self.axes['z'].position_um)
 
-
+# assume only one camera per microscope for now
 class Camera(interface.Camera):
     def __init__(self, mm_core: CMMCorePlus, save_path: str = '', micromanager_path: str = '/Applications/Micro-Manager', config_file: str = 'MMConfig_demo.cfg' ) -> None:
         self.microscope_handler = mm_core
@@ -78,6 +78,31 @@ class Camera(interface.Camera):
         else:
             print(f'Loading configuration file {config_path}.')
             self.microscope_handler.loadSystemConfiguration()
+
+        self.camera_device = Device(
+            self.microscope_handler.getCameraDevice(),
+            self.microscope_handler
+        )
+        self._settings = CameraSettings(
+            pixel_size_um=self.microscope_handler.getPixelSizeUm(),
+            width_pixels=self.camera_device.getPropertyObject(
+            'OnCameraCCDXsize').value,
+            height_pixels=self.camera_device.getPropertyObject(
+            'OnCameraCCDYsize').value,
+            exposure_time_ms=self.camera_device.getPropertyObject(
+            'Exposure' ).value,
+            gain=self.camera_device.getPropertyObject(
+            'Gain').value)
+        # assert self.settings.pixel_size_um !=0 and self.settings.pixel_size_um !=1, f"Pixel size is set to {pixel_size}; it is likely not set or calibrated."
+        # if pixel_size == 0:
+        #     raise Error(f"Pixel size is set to {pixel_size}; it is likely not set or calibrated.")
+        # elif pixel_size == 1:
+        #     raise Error(f"Pixel size is set to {pixel_size}; it is likely not set or calibrated.")
+        # else:
+        #     print(f"Pixel size set to {pixel_size} um")
+        # return self.microscope_handler.getPixelSizeUm()
+
+        self.settings().
 
     def capture_image(self) -> "numpy.ndarray":
 
@@ -122,3 +147,7 @@ class Camera(interface.Camera):
 
         """
         return self.microscope_handler.snap()
+
+    # use a logger -> make issue
+
+
