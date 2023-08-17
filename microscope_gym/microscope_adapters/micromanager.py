@@ -2,6 +2,7 @@ import os.path
 from collections import OrderedDict
 from typing import List
 from pathlib import Path
+from warnings import warn
 # from pycromanager import Core
 # [Jamie] I think this should be pymmcore_plus, not pycromanager
 # pycromanager interfaces with the jova objects in the gui
@@ -60,7 +61,8 @@ class Stage(interface.Stage):
 
 # assume only one camera per microscope for now
 class Camera(interface.Camera):
-    def __init__(self, mm_core: CMMCorePlus, save_path: str = '', micromanager_path: str = '/Applications/Micro-Manager', config_file: str = 'MMConfig_demo.cfg' ) -> None:
+    def __init__(self, mm_core: CMMCorePlus, save_path: str = '', micromanager_path: str = '/Applications/Micro-Manager', config_file: str = 'MMConfig_demo.cfg',
+                 pixel_size_um=None) -> None:
         self.microscope_handler = mm_core
         if save_path == '':
             import tempfile
@@ -92,17 +94,12 @@ class Camera(interface.Camera):
             exposure_time_ms=self.camera_device.getPropertyObject(
             'Exposure' ).value,
             gain=self.camera_device.getPropertyObject(
-            'Gain').value)
+            'Gain').value
+        )
         # assert self.settings.pixel_size_um !=0 and self.settings.pixel_size_um !=1, f"Pixel size is set to {pixel_size}; it is likely not set or calibrated."
-        # if pixel_size == 0:
-        #     raise Error(f"Pixel size is set to {pixel_size}; it is likely not set or calibrated.")
-        # elif pixel_size == 1:
-        #     raise Error(f"Pixel size is set to {pixel_size}; it is likely not set or calibrated.")
-        # else:
-        #     print(f"Pixel size set to {pixel_size} um")
-        # return self.microscope_handler.getPixelSizeUm()
+        if (pixel_size_um == 0 | pixel_size_um == 1):
+            warn(f'Pixel size is set to {pixel_size_um}; it is may not set or calibrated.')
 
-        self.settings().
 
     def capture_image(self) -> "numpy.ndarray":
 
@@ -148,6 +145,48 @@ class Camera(interface.Camera):
         """
         return self.microscope_handler.snap()
 
-    # use a logger -> make issue
+    # todo: use a logger -> make issue
+
+    def configure_camera(self, settings: CameraSettings) -> None:
+        '''
+        Configure camera settings.
+
+        from pymmcore-plus source code:
+
+        @synchronized(_lock)
+        def setProperty(self,
+                label: str,
+                propName: str,
+                propValue: bool | float | int | str) -> None
+        '''
 
 
+
+        # Micromanager sets different pixel sizes for a configuration using a resolutionID
+        # set the current pixel size (they should all be set in the MM configuration file)
+        self.microscope_handler.setPixelSizeUm(
+            resolutionID=self.microscope_handler.getCurrentPixelSizeConfig(),
+            pixSize=settings.pixel_size_um
+        ),
+        # using luxendo code as a hint...
+        self.microscope_handler.setProperty(
+            self.camera_device,
+            'OnCameraCCDXsize',
+            settings.width_pixels
+        )
+        self.microscope_handler.setProperty(
+            self.camera_device,
+            'OnCameraCCDYsize',
+            settings.height_pixels
+        )
+        self.microscope_handler.setProperty(
+            self.camera_device,
+            'Exposure',
+            settings.exposure_time_ms
+        )
+        self.microscope_handler.setProperty(
+            self.camera_device,
+            'Gain',
+            settings.gain
+        )
+        return
