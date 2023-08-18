@@ -23,16 +23,17 @@ class Stage(interface.Stage):
         self._get_axes_positions_from_microscope()
 
     def _get_axes_positions_from_microscope(self):
+        # Todo: limits. There is no general way to get the X and Y limits for a particular stage from mmcore.
         self.axes["z"] = Axis(name='z',
-                              position_um=self.microscope_handler.get_position(),
+                              position_um=self.microscope_handler.getZPosition(),
                               min=-10,  # TODO Figure out how to get this from MMCore
                               max=10)  # TODO Figure out how to get this from MMCore
         self.axes["y"] = Axis(name='y',
-                              position_um=self.microscope_handler.get_y_position(),
+                              position_um=self.microscope_handler.getYPosition(),
                               min=-10,  # TODO Figure out how to get this from MMCore
                               max=10)  # TODO Figure out how to get this from MMCore
         self.axes["x"] = Axis(name='x',
-                              position_um=self.microscope_handler.get_x_position(),
+                              position_um=self.microscope_handler.getXPosition(),
                               min=-10,  # TODO Figure out how to get this from MMCore
                               max=10)  # TODO Figure out how to get this from MMCore
 
