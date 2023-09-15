@@ -60,27 +60,31 @@ class Stage(interface.Stage):
         self.microscope_handler.set_xy_position(self.axes['x'].position_um, self.axes['y'].position_um)
         self.microscope_handler.set_position(self.axes['z'].position_um)
 
+
 # assume only one camera per microscope for now
 class Camera(interface.Camera):
-    def __init__(self, mm_core: CMMCorePlus, save_path: str = '', micromanager_path: str = '/Applications/Micro-Manager', config_file: str = 'MMConfig_demo.cfg',
+    def __init__(self, mm_core: CMMCorePlus, save_path: str = '',
+                 micromanager_path: str = '/Applications/Micro-Manager', config_file: str = 'MMConfig_demo.cfg',
                  pixel_size_um=None) -> None:
         self.microscope_handler = mm_core
-        if save_path == '':
-            import tempfile
-            self.save_path = Path(tempfile.mkdtemp)
-        else:
-            self.save_path = Path(save_path)
-        self.save_path.mkdir(exist_ok=True, parents=True)
-        if find_micromanager() == '':
-            raise Exception('Micro-manager installation not found or environment variable not set.')
-        else:
-            self.micromanager_path = find_micromanager()
-        config_path = os.path.join(mm_dir, config_file)
-        if not Path(config_path):
-            raise Exception(f'Configuration file {config_file} not found in folder {micromanager_path}.')
-        else:
-            print(f'Loading configuration file {config_path}.')
-            self.microscope_handler.loadSystemConfiguration()
+        # if save_path == '':
+        #     import tempfile
+        #     self.save_path = Path(tempfile.mkdtemp)
+        # else:
+        #     self.save_path = Path(save_path)
+        # self.save_path.mkdir(exist_ok=True, parents=True)
+        # self.micromanager_path = find_micromanager()
+        # # use assertion?
+        # # why would we not?  There was a reason. What was it??
+        # if self.micromanager_path == '':
+        #     raise Exception('Micro-manager installation not found or environment variable not set.')
+        # config_path = os.path.join(mm_dir, config_file)
+        # if not Path(config_path):
+        #     raise Exception(f'Configuration file {config_file} not found in folder {self.micromanager_path}.')
+        # else:
+        #     print(f'Loading configuration file {config_path}.')
+        #     self.microscope_handler.loadSystemConfiguration()
+        self.microscope_handler.loadSystemConfiguration()
 
         self.camera_device = Device(
             self.microscope_handler.getCameraDevice(),
@@ -89,21 +93,19 @@ class Camera(interface.Camera):
         self._settings = CameraSettings(
             pixel_size_um=self.microscope_handler.getPixelSizeUm(),
             width_pixels=self.camera_device.getPropertyObject(
-            'OnCameraCCDXsize').value,
+                'OnCameraCCDXSize').value,
             height_pixels=self.camera_device.getPropertyObject(
-            'OnCameraCCDYsize').value,
+                'OnCameraCCDYSize').value,
             exposure_time_ms=self.camera_device.getPropertyObject(
-            'Exposure' ).value,
+                'Exposure').value,
             gain=self.camera_device.getPropertyObject(
-            'Gain').value
+                'Gain').value
         )
         # assert self.settings.pixel_size_um !=0 and self.settings.pixel_size_um !=1, f"Pixel size is set to {pixel_size}; it is likely not set or calibrated."
-        if (pixel_size_um == 0 | pixel_size_um == 1):
-            warn(f'Pixel size is set to {pixel_size_um}; it is may not set or calibrated.')
-
+        if self._settings.pixel_size_um == 0 or self._settings.pixel_size_um == 1:
+            warn(f'Pixel size is set to {self._settings.pixel_size_um}; it may not be set or calibrated.')
 
     def capture_image(self) -> "numpy.ndarray":
-
         # mmc.snap can take a channel as a parameter (for multi-channel cameras)
 
         """
@@ -161,33 +163,36 @@ class Camera(interface.Camera):
                 propValue: bool | float | int | str) -> None
         '''
 
-
-
         # Micromanager sets different pixel sizes for a configuration using a resolutionID
         # set the current pixel size (they should all be set in the MM configuration file)
-        self.microscope_handler.setPixelSizeUm(
-            resolutionID=self.microscope_handler.getCurrentPixelSizeConfig(),
-            pixSize=settings.pixel_size_um
-        ),
-        # using luxendo code as a hint...
+        # self.microscope_handler.setPixelSizeUm(
+        #     resolutionID=self.microscope_handler.getCurrentPixelSizeConfig(),
+        #     pixSize=settings.pixel_size_um
+        # ),
+        # # using luxendo code as a hint...
+        # self.microscope_handler.setProperty(
+        #     self.camera_device.label,
+        #     'OnCameraCCDXSize',
+        #     settings.width_pixels
+        # )
+        # self.microscope_handler.setProperty(
+        #     self.camera_device.label,
+        #     'OnCameraCCDYSize',
+        #     settings.height_pixels
+        # )
         self.microscope_handler.setProperty(
-            self.camera_device,
-            'OnCameraCCDXsize',
-            settings.width_pixels
-        )
-        self.microscope_handler.setProperty(
-            self.camera_device,
-            'OnCameraCCDYsize',
-            settings.height_pixels
-        )
-        self.microscope_handler.setProperty(
-            self.camera_device,
+            self.camera_device.label,
             'Exposure',
             settings.exposure_time_ms
         )
         self.microscope_handler.setProperty(
-            self.camera_device,
+            self.camera_device.label,
             'Gain',
             settings.gain
         )
+        # save the settings in the Camera object
+        # self._settings = settings
+        self._settings.exposure_time_ms = settings.gain
+        self._settings.gain = settings.gain
+
         return

@@ -31,3 +31,4 @@ my...etc
 ```
 if 2nd option, how we initialize the components (Objective, Stage, Camera, etc)  becomes part of api init fxn signature becomes part of api
 if 1st (microscope factory creates microscope object) then only the microscope is part of public interfacee (and some public methods of components -- objectve, stage, etc).
+    
