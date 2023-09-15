@@ -14,11 +14,19 @@ from warnings import warn
 from pymmcore_plus import CMMCorePlus, Device, find_micromanager
 from microscope_gym import interface
 from microscope_gym.interface import Objective, Microscope, Axis, Camera, CameraSettings
+from typing import Tuple
 
 
 class Stage(interface.Stage):
-    def __init__(self, mm_core: CMMCorePlus) -> None:
+    def __init__(self, mm_core: CMMCorePlus, z_limits: Tuple[int], y_limits: Tuple[int], x_limits: Tuple[int]):
+        self.z_min, self.z_max = z_limits
+        self.y_min, self.y_max = y_limits
+        self.x_min, self.x_max = x_limits
         self.microscope_handler = mm_core
+        focus_device_name = self.microscope_handler.getFocusDevice()
+        self.focus_device = Device(focus_device_name, self.microscope_handler)
+        stage_device_name = self.microscope_handler.getXYStageDevice()
+        self.stage_device = Device(stage_device_name, self.microscope_handler)
         self.axes = OrderedDict()
         self._get_axes_positions_from_microscope()
 
@@ -26,23 +34,19 @@ class Stage(interface.Stage):
         # Todo: limits. There is no general way to get the X and Y limits for a particular stage from mmcore.
         self.axes["z"] = Axis(name='z',
                               position_um=self.microscope_handler.getZPosition(),
-                              min=-10,  # TODO Figure out how to get this from MMCore
-                              max=10)  # TODO Figure out how to get this from MMCore
+                              min=self.z_min,  # TODO Figure out how to get this from MMCore
+                              max=self.z_max)  # TODO Figure out how to get this from MMCore
         self.axes["y"] = Axis(name='y',
                               position_um=self.microscope_handler.getYPosition(),
-                              min=-10,  # TODO Figure out how to get this from MMCore
-                              max=10)  # TODO Figure out how to get this from MMCore
+                              min=self.y_min,  # TODO Figure out how to get this from MMCore
+                              max=self.y_max)  # TODO Figure out how to get this from MMCore
         self.axes["x"] = Axis(name='x',
                               position_um=self.microscope_handler.getXPosition(),
-                              min=-10,  # TODO Figure out how to get this from MMCore
-                              max=10)  # TODO Figure out how to get this from MMCore
+                              min=self.x_min,  # TODO Figure out how to get this from MMCore
+                              max=self.x_max)  # TODO Figure out how to get this from MMCore
 
     def is_moving(self):
-        focus_device_name = self.microscope_handler.get_focus_device()
-        stage_device_name = self.microscope_handler.get_xy_stage_device()
-
-        return self.microscope_handler.device_busy(
-            focus_device_name) or self.microscope_handler.device_busy(stage_device_name)
+        return self.stage_device.isBusy() or self.focus_device.isBusy()
 
     def _update_axes_positions(self, axis_names: List[str], positions: List[float]):
         '''Write new positions to axes.
@@ -57,8 +61,8 @@ class Stage(interface.Stage):
         '''
         for name, position in zip(axis_names, positions):
             self.axes[name].position_um = position
-        self.microscope_handler.set_xy_position(self.axes['x'].position_um, self.axes['y'].position_um)
-        self.microscope_handler.set_position(self.axes['z'].position_um)
+        self.microscope_handler.setXYPosition(self.axes['x'].position_um, self.axes['y'].position_um)
+        self.microscope_handler.setZPosition(self.axes['z'].position_um)
 
 
 # assume only one camera per microscope for now
