@@ -200,3 +200,6 @@ class Camera(interface.Camera):
         self._settings.gain = settings.gain
 
         return
+
+
+# TODO: add Microscope class where we can override the abstract methods and the z-stack and tiling methods (to make them more efficient)
