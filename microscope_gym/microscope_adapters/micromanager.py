@@ -15,6 +15,16 @@ from pymmcore_plus import CMMCorePlus, Device, find_micromanager
 from microscope_gym import interface
 from microscope_gym.interface import Objective, Microscope, Axis, Camera, CameraSettings
 from typing import Tuple
+from pydantic import BaseModel
+
+
+class StageLimits(BaseModel):
+    z_min: float
+    z_max: float
+    y_min: float
+    y_max: float
+    x_min: float
+    x_max: float
 
 
 class Stage(interface.Stage):
