@@ -73,11 +73,11 @@ as few setter methods as possible
 
 * [x] Schedule Meeting with Marcus and Hugo
 * [x] Create GitHub repository
-* [ ] order open uc2 microscope
+* [x] order open uc2 microscope
 * [x] write microscope emulator
 * [x] write notebook explaining basic imaging api
-* [ ] write a notebook that uses napari to train an apoc model to identify microtubule crossings in the sample data
-* [ ] write smart feature that uses a trained apoc model generated in napari to find and imag certain features with the mock scope and then images a z-stack at the identified positions
+* [x] write a notebook that uses napari to train an apoc model to identify microtubule crossings in the sample data
+* [x] write smart feature that uses a trained apoc model generated in napari to find and imag certain features with the mock scope and then images a z-stack at the identified positions
 * [ ] create napari plugin that implements the above feature in napari
 
 ## Example microscope APIs
