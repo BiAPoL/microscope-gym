@@ -7,8 +7,8 @@ from microscope_gym.interface import Objective, CameraSettings
 
 
 class Axis(interface.stage.Axis):
-    last_move_time = -1.0
-    move_timeout = 0.001
+    last_move_time:float = -1.0
+    move_timeout:float = 0.001
 
 
 class Stage(interface.Stage):
